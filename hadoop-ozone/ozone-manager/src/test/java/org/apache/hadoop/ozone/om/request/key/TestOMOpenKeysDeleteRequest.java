@@ -26,10 +26,12 @@ import java.util.UUID;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.om.OMMetrics;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.request.OMRequestTestUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
 import com.google.common.base.Optional;
@@ -183,6 +185,12 @@ public class TestOMOpenKeysDeleteRequest extends TestOMKeyRequest {
    */
   private void deleteOpenKeysFromCache(OpenKeyBucket... openKeys)
       throws Exception {
+    OmBucketInfo omBucketInfo = OmBucketInfo.newBuilder()
+        .setVolumeName(volumeName).setBucketName(bucketName)
+        .setCreationTime(Time.now()).build();
+    String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
+    omMetadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
+        new CacheValue<>(Optional.of(omBucketInfo), Long.MAX_VALUE));
 
     OMRequest omRequest =
         doPreExecute(createDeleteOpenKeyRequest(openKeys));
@@ -221,6 +229,13 @@ public class TestOMOpenKeysDeleteRequest extends TestOMKeyRequest {
     for (OpenKeyBucket openKeyBucket: openKeys) {
       String volume = openKeyBucket.getVolumeName();
       String bucket = openKeyBucket.getBucketName();
+      OmBucketInfo omBucketInfo = OmBucketInfo.newBuilder()
+          .setVolumeName(volume).setBucketName(bucket)
+          .setCreationTime(Time.now()).build();
+      String bucketKey = omMetadataManager.getBucketKey(volume, bucket);
+      omMetadataManager.getBucketTable().addCacheEntry(
+          new CacheKey<>(bucketKey), new CacheValue<>(Optional.of(omBucketInfo),
+          Long.MAX_VALUE));
 
       for (OpenKey openKey: openKeyBucket.getKeysList()) {
         if (keySize > 0) {

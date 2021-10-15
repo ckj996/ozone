@@ -21,6 +21,7 @@ import org.apache.hadoop.hdds.utils.db.BatchOperation;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -28,6 +29,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.DELETED_TABLE;
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.OPEN_KEY_TABLE;
@@ -39,11 +41,12 @@ import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.OPEN_KEY_TABLE;
 @CleanupTableInfo(cleanupTables = {OPEN_KEY_TABLE, DELETED_TABLE})
 public class OMOpenKeysDeleteResponse extends AbstractOMKeyDeleteResponse {
 
-  private Map<String, OmKeyInfo> keysToDelete;
+  private Map<String, Entry<OmKeyInfo, OmBucketInfo>> keysToDelete;
 
   public OMOpenKeysDeleteResponse(
       @Nonnull OzoneManagerProtocolProtos.OMResponse omResponse,
-      @Nonnull Map<String, OmKeyInfo> keysToDelete, boolean isRatisEnabled) {
+      @Nonnull Map<String, Entry<OmKeyInfo, OmBucketInfo>> keysToDelete,
+      boolean isRatisEnabled) {
 
     super(omResponse, isRatisEnabled);
     this.keysToDelete = keysToDelete;
@@ -67,9 +70,15 @@ public class OMOpenKeysDeleteResponse extends AbstractOMKeyDeleteResponse {
     Table<String, OmKeyInfo> openKeyTable =
         omMetadataManager.getOpenKeyTable(getBucketLayout());
 
-    for (Map.Entry<String, OmKeyInfo> keyInfoPair: keysToDelete.entrySet()) {
+    for (Entry<String, Entry<OmKeyInfo, OmBucketInfo>> keyInfoPair:
+        keysToDelete.entrySet()) {
       addDeletionToBatch(omMetadataManager, batchOperation, openKeyTable,
-          keyInfoPair.getKey(), keyInfoPair.getValue());
+          keyInfoPair.getKey(), keyInfoPair.getValue().getKey());
+      // update bucket table.
+      OmBucketInfo omBucketInfo = keyInfoPair.getValue().getValue();
+      omMetadataManager.getBucketTable().putWithBatch(batchOperation,
+          omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
+              omBucketInfo.getBucketName()), omBucketInfo);
     }
   }
 }
