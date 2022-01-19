@@ -80,7 +80,7 @@ public class TestOpenKeyCleanupService {
   // transactions.
   private static final int FOLLOWER_CHECK_INTERVAL = 1000;
 
-  private static final Random random = new Random();
+  private static final Random RANDOM = new Random();
 
   private MiniOzoneCluster cluster;
   private boolean isOMHA;
@@ -565,7 +565,7 @@ public class TestOpenKeyCleanupService {
         key = UUID.randomUUID().toString();
       }
 
-      long clientID = random.nextLong();
+      long clientID = RANDOM.nextLong();
 
       OmKeyInfo keyInfo = TestOMRequestUtils.createOmKeyInfo(volume,
           bucket, key, HddsProtos.ReplicationType.RATIS,
