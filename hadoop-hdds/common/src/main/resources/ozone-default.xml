@@ -1186,7 +1186,7 @@
     <description>
       A background job that periodically checks open key entries and marks
       expired open keys for deletion. This entry controls the interval of this
-      cleanup check.
+      cleanup check. Unit could be defined with postfix (ns,ms,s,m,h,d)
     </description>
   </property>
 
@@ -1197,7 +1197,7 @@
     <description>
       Controls how long an open key operation is considered active. Specifically, if a key
       has been open longer than the value of this config entry, that open key is considered as
-      expired (e.g. due to client crash).
+      expired (e.g. due to client crash). Unit could be defined with postfix (ns,ms,s,m,h,d)
     </description>
   </property>
 
