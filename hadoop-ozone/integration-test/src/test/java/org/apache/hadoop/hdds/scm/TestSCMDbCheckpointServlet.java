@@ -49,7 +49,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
 import org.mockito.Matchers;
 
-import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_OPEN_KEY_EXPIRE_THRESHOLD;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -86,7 +86,8 @@ public class TestSCMDbCheckpointServlet {
     scmId = UUID.randomUUID().toString();
     omId = UUID.randomUUID().toString();
     conf.setBoolean(OZONE_ACL_ENABLED, true);
-    conf.setTimeDuration(OZONE_OPEN_KEY_EXPIRE_THRESHOLD, 2, TimeUnit.SECONDS);
+    conf.setTimeDuration(OZONE_OM_OPEN_KEY_EXPIRE_THRESHOLD,
+        2, TimeUnit.SECONDS);
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)

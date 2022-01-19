@@ -50,7 +50,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONN
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_NAMES;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
-import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_OPEN_KEY_EXPIRE_THRESHOLD;
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
 import static org.apache.ozone.test.GenericTestUtils.*;
 
@@ -82,7 +82,7 @@ public class TestSecureOzoneManager {
     scmId = UUID.randomUUID().toString();
     omId = UUID.randomUUID().toString();
     conf.setBoolean(OZONE_ACL_ENABLED, true);
-    conf.setTimeDuration(OZONE_OPEN_KEY_EXPIRE_THRESHOLD, 2, TimeUnit.SECONDS);
+    conf.setTimeDuration(OZONE_OM_OPEN_KEY_EXPIRE_THRESHOLD, 2, TimeUnit.SECONDS);
     conf.set(HADOOP_SECURITY_AUTHENTICATION, KERBEROS.toString());
     conf.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 2);
     conf.set(OZONE_SCM_NAMES, "localhost");

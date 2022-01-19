@@ -50,7 +50,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS_WILDCARD;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_DB_CHECKPOINT_REQUEST_FLUSH;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_AUTH_TYPE;
-import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_OPEN_KEY_EXPIRE_THRESHOLD;
 import static org.apache.hadoop.ozone.om.OMDBCheckpointServlet.writeDBCheckpointToStream;
 
 import org.junit.After;
@@ -168,7 +168,8 @@ public class TestOMDbCheckpointServlet {
   public void testDoGet() throws Exception {
     conf.setBoolean(OZONE_ACL_ENABLED, false);
     conf.set(OZONE_ADMINISTRATORS, OZONE_ADMINISTRATORS_WILDCARD);
-    conf.setTimeDuration(OZONE_OPEN_KEY_EXPIRE_THRESHOLD, 2, TimeUnit.SECONDS);
+    conf.setTimeDuration(OZONE_OM_OPEN_KEY_EXPIRE_THRESHOLD,
+        2, TimeUnit.SECONDS);
 
     setupCluster();
 

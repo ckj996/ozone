@@ -116,8 +116,8 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_BL
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
-import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL;
-import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_DEFAULT;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_OPEN_KEY_CLEANUP_SERVICE_INTERVAL;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_DIR_DELETING_SERVICE_INTERVAL;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_DIR_DELETING_SERVICE_INTERVAL_DEFAULT;
@@ -258,8 +258,8 @@ public class KeyManagerImpl implements KeyManager {
 
     if (openKeyCleanupService == null) {
       long serviceInterval = configuration.getTimeDuration(
-          OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL,
-          OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_DEFAULT.getDuration(),
+              OZONE_OM_OPEN_KEY_CLEANUP_SERVICE_INTERVAL,
+          OZONE_OM_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_DEFAULT.getDuration(),
           TimeUnit.MILLISECONDS);
 
       // No timeout duration for open key cleanup. The OM RPC call will time

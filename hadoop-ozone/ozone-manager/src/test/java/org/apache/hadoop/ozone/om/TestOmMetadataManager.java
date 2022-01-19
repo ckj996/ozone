@@ -554,11 +554,11 @@ public class TestOmMetadataManager {
     // To create expired keys, they will be assigned a creation time twice as
     // old as the minimum expiration time.
     TimeUnit expireUnit =
-        OMConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_DEFAULT.getUnit();
+        OMConfigKeys.OZONE_OM_OPEN_KEY_EXPIRE_THRESHOLD_DEFAULT.getUnit();
 
     long expireThreshold = ozoneConfiguration.getTimeDuration(
-        OMConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD,
-        OMConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_DEFAULT.getDuration(),
+        OMConfigKeys.OZONE_OM_OPEN_KEY_EXPIRE_THRESHOLD,
+        OMConfigKeys.OZONE_OM_OPEN_KEY_EXPIRE_THRESHOLD_DEFAULT.getDuration(),
         expireUnit);
 
     TimeDuration expireDuration = TimeDuration.valueOf(expireThreshold,
