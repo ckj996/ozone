@@ -134,17 +134,10 @@ public class OpenKeyCleanupService extends BackgroundService {
   }
 
   private boolean shouldRun() {
-    if (ozoneManager == null) {
-      // OzoneManager can be null for testing
-      return true;
-    }
     return ozoneManager.isLeaderReady();
   }
 
   private boolean isRatisEnabled() {
-    if (ozoneManager == null) {
-      return false;
-    }
     return ozoneManager.isRatisEnabled();
   }
 
