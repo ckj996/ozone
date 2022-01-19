@@ -229,9 +229,8 @@ public class OpenKeyCleanupService extends BackgroundService {
             .setServerId(server.getRaftPeerId())
             .setGroupId(server.getRaftGroupId())
             .setCallId(runCount.get())
-            .setMessage(
-                Message.valueOf(
-                    OMRatisHelper.convertRequestToByteString(omRequest)))
+            .setMessage(Message.valueOf(
+                OMRatisHelper.convertRequestToByteString(omRequest)))
             .setType(RaftClientRequest.writeRequestType())
             .build();
 
