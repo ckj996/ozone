@@ -1125,10 +1125,9 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     // up after the cache is flushed.
     List<String> expiredKeys = Lists.newArrayList();
 
-    try (
-        TableIterator<String, ? extends KeyValue<String, OmKeyInfo>>
-            keyValueTableIterator = getOpenKeyTable(
-            getBucketLayout()).iterator()) {
+    try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>>
+        keyValueTableIterator = getOpenKeyTable(
+        getBucketLayout()).iterator()) {
 
       while (keyValueTableIterator.hasNext() && expiredKeys.size() < count) {
         KeyValue<String, OmKeyInfo> openKeyValue = keyValueTableIterator.next();
