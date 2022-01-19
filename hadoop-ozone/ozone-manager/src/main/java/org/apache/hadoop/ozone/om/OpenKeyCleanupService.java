@@ -179,7 +179,7 @@ public class OpenKeyCleanupService extends BackgroundService {
             submittedOpenKeyCount.addAndGet(expiredOpenKeys.size());
           }
         } catch (IOException e) {
-          LOG.error("Error while running delete keys background task. Will " +
+          LOG.error("Error while running open keys cleanup task. Will " +
               "retry at next run.", e);
         }
       }
@@ -283,8 +283,8 @@ public class OpenKeyCleanupService extends BackgroundService {
       } catch (NumberFormatException ex) {
         // If the client ID cannot be parsed correctly, do not add the key to
         // the map.
-        LOG.error("Failed to parse client ID {} as a long from open key {}.",
-            clientID, openKeyName, ex);
+        LOG.error("OpenKeyCleanUpService: Failed to parse client ID {}" +
+            "as a long from open key {}.", clientID, openKeyName, ex);
       }
     }
   }
