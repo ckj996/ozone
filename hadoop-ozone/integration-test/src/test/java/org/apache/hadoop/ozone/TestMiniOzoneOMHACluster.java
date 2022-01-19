@@ -80,7 +80,6 @@ public class TestMiniOzoneOMHACluster {
         .setNumOfOzoneManagers(numOfOMs)
         .build();
     cluster.waitForClusterToBeReady();
-    cluster.restartOzoneManager();
   }
 
   /**
