@@ -34,9 +34,10 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
-import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.ozone.test.LambdaTestUtils;
 import org.apache.ratis.util.TimeDuration;
 import org.junit.After;
 import org.junit.Assert;
@@ -56,7 +57,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
  */
 @RunWith(Parameterized.class)
 public class TestOpenKeyCleanupService {
-  // Increase service interval of open key cleanup so we can trigger the
+  // Increase service interval of open key cleanup, so we can trigger the
   // service manually between setting up the DB and checking the results.
   // Increase service interval of key deleting service to ensure it does not
   // run during the tests, interfering with results.
@@ -461,7 +462,7 @@ public class TestOpenKeyCleanupService {
   private Set<String> getAllOpenKeys(OzoneManager om) throws Exception {
     Set<String> keys = new HashSet<>();
     List<? extends Table.KeyValue<String, OmKeyInfo>> keyPairs =
-        om.getMetadataManager().getOpenKeyTable()
+        om.getMetadataManager().getOpenKeyTable(BucketLayout.DEFAULT)
             .getRangeKVs(null, Integer.MAX_VALUE);
 
     for (Table.KeyValue<String, OmKeyInfo> keyPair: keyPairs) {
@@ -548,14 +549,14 @@ public class TestOpenKeyCleanupService {
     }
 
     for (int i = 0; i < numKeys; i++) {
-      String key = null;
+      String key;
       if (i == 0) {
         // Add one messy key with lots of separators for testing.
         key = OM_KEY_PREFIX +
-            UUID.randomUUID().toString() +
+            UUID.randomUUID() +
             OM_KEY_PREFIX +
             OM_KEY_PREFIX +
-            UUID.randomUUID().toString() +
+            UUID.randomUUID() +
             OM_KEY_PREFIX +
             OM_KEY_PREFIX;
       } else {
