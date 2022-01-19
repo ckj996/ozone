@@ -246,8 +246,6 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   protected OmMetadataManagerImpl() {
     OzoneConfiguration conf = new OzoneConfiguration();
     this.lock = new OzoneManagerLock(conf);
-    this.openKeyExpireThresholdMS =
-        OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT;
     this.omEpoch = 0;
   }
 
