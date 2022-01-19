@@ -258,7 +258,7 @@ public class KeyManagerImpl implements KeyManager {
 
     if (openKeyCleanupService == null) {
       long serviceInterval = configuration.getTimeDuration(
-              OZONE_OM_OPEN_KEY_CLEANUP_SERVICE_INTERVAL,
+          OZONE_OM_OPEN_KEY_CLEANUP_SERVICE_INTERVAL,
           OZONE_OM_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_DEFAULT.getDuration(),
           TimeUnit.MILLISECONDS);
 
