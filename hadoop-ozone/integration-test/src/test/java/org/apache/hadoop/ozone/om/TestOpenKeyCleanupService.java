@@ -113,7 +113,8 @@ public class TestOpenKeyCleanupService {
         TESTING_SERVICE_INTERVAL.getDuration(),
         TESTING_SERVICE_INTERVAL.getUnit());
     // Set open key cleanup configurations.
-    conf.setTimeDuration(OMConfigKeys.OZONE_OM_OPEN_KEY_CLEANUP_SERVICE_INTERVAL,
+    conf.setTimeDuration(
+        OMConfigKeys.OZONE_OM_OPEN_KEY_CLEANUP_SERVICE_INTERVAL,
         openKeyCleanupServiceInterval.getDuration(),
         openKeyCleanupServiceInterval.getUnit());
     conf.setTimeDuration(OMConfigKeys.OZONE_OM_OPEN_KEY_EXPIRE_THRESHOLD,
