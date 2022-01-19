@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.fs.OzoneManagerFS;
 import org.apache.hadoop.hdds.utils.BackgroundService;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
+import org.apache.ratis.util.TimeDuration;
 
 import java.io.IOException;
 import java.util.List;
@@ -117,15 +118,12 @@ public interface KeyManager extends OzoneManagerFS, IOzoneAcl {
   List<BlockGroup> getPendingDeletionKeys(int count) throws IOException;
 
   /**
-   * Returns the names of up to {@code count} open keys that are older than
-   * the configured expiration age.
-   *
-   * @param count The maximum number of expired open keys to return.
-   * @return a list of {@link String} representing the names of expired
-   * open keys.
+   * Returns the names of up to {@code count} open keys whose time since
+   * creation is larger than {@code expireThreshold}.
    * @throws IOException
    */
-  List<String> getExpiredOpenKeys(int count) throws IOException;
+  List<String> getExpiredOpenKeys(TimeDuration expireThreshold, int count)
+      throws IOException;
 
   /**
    * Returns the metadataManager.
@@ -139,6 +137,11 @@ public interface KeyManager extends OzoneManagerFS, IOzoneAcl {
    */
   BackgroundService getDeletingService();
 
+  /**
+   * Returns the instance of Open Key Deleting Service.
+   * @return Background service.
+   */
+  BackgroundService getOpenKeyCleanupService();
 
   OmMultipartUploadList listMultipartUploads(String volumeName,
       String bucketName, String prefix) throws OMException;

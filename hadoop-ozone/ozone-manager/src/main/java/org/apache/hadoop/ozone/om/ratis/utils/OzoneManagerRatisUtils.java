@@ -69,6 +69,7 @@ import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetQuotaRequest;
 import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeAddAclRequest;
 import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeRemoveAclRequest;
 import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeSetAclRequest;
+import org.apache.hadoop.ozone.om.response.key.OMOpenKeysDeleteRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneObj.ObjectType;
@@ -164,6 +165,8 @@ public final class OzoneManagerRatisUtils {
       return new OMCancelPrepareRequest(omRequest);
     case RevokeS3Secret:
       return new S3RevokeSecretRequest(omRequest);
+    case DeleteOpenKeys:
+      return new OMOpenKeysDeleteRequest(omRequest);
 
     /**
      * Following key requests will be created in {@link OMKeyRequestFactory}.

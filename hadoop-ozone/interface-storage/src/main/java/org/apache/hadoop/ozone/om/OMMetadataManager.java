@@ -46,6 +46,7 @@ import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.apache.hadoop.hdds.utils.db.Table;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.ratis.util.TimeDuration;
 
 /**
  * OM metadata manager interface.
@@ -256,14 +257,12 @@ public interface OMMetadataManager extends DBStoreHAManager {
   List<BlockGroup> getPendingDeletionKeys(int count) throws IOException;
 
   /**
-   * Returns the names of up to {@code count} open keys that are older than
-   * the configured expiration age.
-   *
-   * @param count The maximum number of open keys to return.
-   * @return a list of {@link String} representing names of open expired keys.
+   * Returns the names of up to {@code count} open keys whose time since
+   * creation is larger than {@code expireThreshold}.
    * @throws IOException
    */
-  List<String> getExpiredOpenKeys(int count) throws IOException;
+  List<String> getExpiredOpenKeys(TimeDuration expireThreshold, int count)
+      throws IOException;
 
   /**
    * Returns the user Table.

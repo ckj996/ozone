@@ -19,9 +19,7 @@ package org.apache.hadoop.ozone.om;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -30,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.client.BlockID;
@@ -82,13 +81,12 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.DB_TRANSIENT_MARKER;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 
 import org.apache.ratis.util.ExitUtils;
+import org.apache.ratis.util.TimeDuration;
 import org.eclipse.jetty.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -195,7 +193,6 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private DBStore store;
 
   private final OzoneManagerLock lock;
-  private final long openKeyExpireThresholdMS;
 
   private Table userTable;
   private Table volumeTable;
@@ -230,9 +227,6 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public OmMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
 
     this.lock = new OzoneManagerLock(conf);
-    this.openKeyExpireThresholdMS = 1000L * conf.getInt(
-        OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS,
-        OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT);
     // TODO: This is a temporary check. Once fully implemented, all OM state
     //  change should go through Ratis - be it standalone (for non-HA) or
     //  replicated (for HA).
@@ -1126,12 +1120,11 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
-  public List<String> getExpiredOpenKeys(int count) throws IOException {
+  public List<String> getExpiredOpenKeys(TimeDuration expireThreshold,
+                                         int count) throws IOException {
     // Only check for expired keys in the open key table, not its cache.
     // If a key expires while it is in the cache, it will be cleaned
     // up after the cache is flushed.
-    final Duration expirationDuration =
-            Duration.of(openKeyExpireThresholdMS, ChronoUnit.MILLIS);
     List<String> expiredKeys = Lists.newArrayList();
 
     try (
@@ -1144,11 +1137,13 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         String openKey = openKeyValue.getKey();
         OmKeyInfo openKeyInfo = openKeyValue.getValue();
 
-        Duration openKeyAge = Duration
-            .between(Instant.ofEpochMilli(openKeyInfo.getCreationTime()),
-                Instant.now());
+        long openKeyAgeMillis =
+            Instant.now().toEpochMilli() - openKeyInfo.getCreationTime();
 
-        if (openKeyAge.compareTo(expirationDuration) >= 0) {
+        TimeDuration openKeyAge = TimeDuration.valueOf(openKeyAgeMillis,
+            TimeUnit.MILLISECONDS);
+
+        if (openKeyAge.compareTo(expireThreshold) >= 0) {
           expiredKeys.add(openKey);
         }
       }

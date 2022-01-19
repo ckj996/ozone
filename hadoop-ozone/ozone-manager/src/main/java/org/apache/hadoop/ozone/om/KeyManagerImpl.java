@@ -116,6 +116,8 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_BL
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_DIR_DELETING_SERVICE_INTERVAL;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_DIR_DELETING_SERVICE_INTERVAL_DEFAULT;
@@ -130,6 +132,8 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLU
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType.KEY;
 import static org.apache.hadoop.util.Time.monotonicNow;
+
+import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -156,6 +160,7 @@ public class KeyManagerImpl implements KeyManager {
   private final boolean grpcBlockTokenEnabled;
 
   private BackgroundService keyDeletingService;
+  private BackgroundService openKeyCleanupService;
 
   private final KeyProviderCryptoExtension kmsProvider;
   private final PrefixManager prefixManager;
@@ -250,6 +255,19 @@ public class KeyManagerImpl implements KeyManager {
           TimeUnit.SECONDS, serviceTimeout, ozoneManager, configuration);
       dirDeletingService.start();
     }
+
+    if (openKeyCleanupService == null) {
+      long serviceInterval = configuration.getTimeDuration(
+          OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL,
+          OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_DEFAULT.getDuration(),
+          TimeUnit.MILLISECONDS);
+
+      // No timeout duration for open key cleanup. The OM RPC call will time
+      // out after 15 minutes.
+      openKeyCleanupService = new OpenKeyCleanupService(ozoneManager, this,
+          serviceInterval, configuration);
+      openKeyCleanupService.start();
+    }
   }
 
   KeyProviderCryptoExtension getKMSProvider() {
@@ -265,6 +283,10 @@ public class KeyManagerImpl implements KeyManager {
     if (dirDeletingService != null) {
       dirDeletingService.shutdown();
       dirDeletingService = null;
+    }
+    if (openKeyCleanupService != null) {
+      openKeyCleanupService.shutdown();
+      openKeyCleanupService = null;
     }
   }
 
@@ -577,8 +599,9 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   @Override
-  public List<String> getExpiredOpenKeys(int count) throws IOException {
-    return metadataManager.getExpiredOpenKeys(count);
+  public List<String> getExpiredOpenKeys(TimeDuration expireThreshold,
+      int count) throws IOException {
+    return metadataManager.getExpiredOpenKeys(expireThreshold, count);
   }
 
   @Override
@@ -594,6 +617,11 @@ public class KeyManagerImpl implements KeyManager {
   @Override
   public BackgroundService getDirDeletingService() {
     return dirDeletingService;
+  }
+
+  @Override
+  public BackgroundService getOpenKeyCleanupService() {
+    return openKeyCleanupService;
   }
 
   @Override
