@@ -80,8 +80,8 @@ public class TestOMOpenKeysDeleteRequest extends TestOMKeyRequest {
   @Test
   public void testDeleteSubsetOfOpenKeys() throws Exception {
     final String volume1 = "volume1";
-    final String volume2 = "bucket1";
-    final String bucket1 = "volume2";
+    final String volume2 = "volume2";
+    final String bucket1 = "bucket1";
     final String bucket2 = "bucket2";
 
     OpenKeyBucket v1b1KeysToDelete = makeOpenKeys(volume1, bucket1, 3);

@@ -182,7 +182,7 @@ public class TestOMOpenKeysDeleteResponse extends TestOMKeyResponse {
       String openKey = omMetadataManager.getOpenKey(volume, bucket,
           key, clientID);
       OmBucketInfo omBucketInfo = OmBucketInfo.newBuilder()
-              .setVolumeName(volumeName).setBucketName(bucketName)
+              .setVolumeName(volume).setBucketName(bucket)
               .setCreationTime(Time.now()).build();
 
       Entry<OmKeyInfo, OmBucketInfo> deletedEntry =
