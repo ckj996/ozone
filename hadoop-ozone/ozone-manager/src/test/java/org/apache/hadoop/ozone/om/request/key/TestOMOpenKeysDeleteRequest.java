@@ -185,12 +185,6 @@ public class TestOMOpenKeysDeleteRequest extends TestOMKeyRequest {
    */
   private void deleteOpenKeysFromCache(OpenKeyBucket... openKeys)
       throws Exception {
-    OmBucketInfo omBucketInfo = OmBucketInfo.newBuilder()
-        .setVolumeName(volumeName).setBucketName(bucketName)
-        .setCreationTime(Time.now()).build();
-    String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
-    omMetadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
-        new CacheValue<>(Optional.of(omBucketInfo), Long.MAX_VALUE));
 
     OMRequest omRequest =
         doPreExecute(createDeleteOpenKeyRequest(openKeys));

@@ -159,8 +159,6 @@ public class OMOpenKeysDeleteRequest extends OMKeyRequest {
       for (OpenKey key: keysPerBucket.getKeysList()) {
         String fullKeyName = omMetadataManager.getOpenKey(volumeName,
                 bucketName, key.getName(), key.getClientID());
-        OmBucketInfo omBucketInfo = getBucketInfo(
-            omMetadataManager, volumeName, bucketName);
 
         // If an open key is no longer present in the table, it was committed
         // and should not be deleted.
@@ -171,11 +169,8 @@ public class OMOpenKeysDeleteRequest extends OMKeyRequest {
           // Set the UpdateID to current transactionLogIndex
           omKeyInfo.setUpdateID(trxnLogIndex, ozoneManager.isRatisEnabled());
 
-          // Update table cache.
-          omMetadataManager.getOpenKeyTable(getBucketLayout()).addCacheEntry(
-                  new CacheKey<>(fullKeyName),
-                  new CacheValue<>(Optional.absent(), trxnLogIndex));
-
+          OmBucketInfo omBucketInfo = getBucketInfo(
+              omMetadataManager, volumeName, bucketName);
           long quotaReleased = sumBlockLengths(omKeyInfo);
           omBucketInfo.incrUsedBytes(-quotaReleased);
           omBucketInfo.incrUsedNamespace(-1L);
@@ -183,6 +178,12 @@ public class OMOpenKeysDeleteRequest extends OMKeyRequest {
               new AbstractMap.SimpleEntry<>(omKeyInfo,
                   omBucketInfo.copyObject());
           deletedKeys.put(fullKeyName, deletedEntry);
+
+          // Update table cache.
+          omMetadataManager.getOpenKeyTable(getBucketLayout()).addCacheEntry(
+                  new CacheKey<>(fullKeyName),
+                  new CacheValue<>(Optional.absent(), trxnLogIndex));
+
           ozoneManager.getMetrics().incNumOpenKeysDeleted();
           LOG.debug("Open key {} deleted.", fullKeyName);
 
