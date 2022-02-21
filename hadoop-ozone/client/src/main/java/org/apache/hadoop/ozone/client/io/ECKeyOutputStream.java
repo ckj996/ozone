@@ -155,41 +155,35 @@ public class ECKeyOutputStream extends KeyOutputStream {
     if (len == 0) {
       return;
     }
-    blockOutputStreamEntryPool.allocateBlockIfNeeded();
-
-    int currentStreamIndex = blockOutputStreamEntryPool.getCurrentStreamEntry()
-        .getCurrentStreamIndex();
-    int currentChunkBufferRemaining =
-        ecChunkBufferCache.dataBuffers[currentStreamIndex].remaining();
-    int currentChunkBufferPosition =
-        ecChunkBufferCache.dataBuffers[currentStreamIndex].position();
-    int bufferForFirstCell = Math.min(currentChunkBufferRemaining, ecChunkSize);
-    int firstCellSize = Math.min(len, bufferForFirstCell);
-    int pos = handleDataWrite(currentStreamIndex, b, off, firstCellSize,
-        currentChunkBufferPosition + firstCellSize == ecChunkSize);
-    checkAndWriteParityCells(pos, false);
-
-    int remaining = len - firstCellSize;
-    int fullCellsRemaining = remaining / ecChunkSize;
-    int lastCellSize = remaining % ecChunkSize;
-    off += firstCellSize;
-    while (fullCellsRemaining > 0) {
-      currentStreamIndex = blockOutputStreamEntryPool.getCurrentStreamEntry()
-          .getCurrentStreamIndex();
-      pos = handleDataWrite(currentStreamIndex, b, off, ecChunkSize, true);
-      off += ecChunkSize;
-      fullCellsRemaining--;
-      checkAndWriteParityCells(pos, fullCellsRemaining > 0 || lastCellSize > 0);
-    }
-
-    if (lastCellSize > 0) {
-      currentStreamIndex = blockOutputStreamEntryPool.getCurrentStreamEntry()
-          .getCurrentStreamIndex();
-      pos = handleDataWrite(currentStreamIndex, b, off,
-          lastCellSize, false);
-      checkAndWriteParityCells(pos, false);
-    }
+    handleWrite(b, off, len, false);
     writeOffset += len;
+  }
+
+  private void handleWrite(byte[] b, int off, long len, boolean retry)
+      throws IOException {
+    while (len > 0) {
+      try {
+        blockOutputStreamEntryPool.allocateBlockIfNeeded();
+        int currentStreamIndex = blockOutputStreamEntryPool.getCurrentStreamEntry()
+            .getCurrentStreamIndex();
+        int currentRem =
+            ecChunkBufferCache.dataBuffers[currentStreamIndex].remaining();
+        int expectedWriteLen = Math.min((int) len,
+            Math.min(currentRem, ecChunkSize));
+        long currentPos =
+            ecChunkBufferCache.dataBuffers[currentStreamIndex].position();
+        int pos =
+            handleDataWrite(currentStreamIndex, b, off, expectedWriteLen,
+                currentPos + expectedWriteLen == ecChunkSize);
+        checkAndWriteParityCells(pos, false);
+        long writtenLength = pos - currentPos;
+        len -= writtenLength;
+        off += writtenLength;
+      } catch (Exception e) {
+        markStreamClosed();
+        throw new IOException(e);
+      }
+    }
   }
 
   private StripeWriteStatus rewriteStripeToNewBlockGroup(
