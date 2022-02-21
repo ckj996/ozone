@@ -368,7 +368,7 @@ public class ECKeyOutputStream extends KeyOutputStream {
     for (int i =
          numDataBlocks; i < (this.numDataBlocks + this.numParityBlocks); i++) {
       // Move the stream entry cursor to parity block index
-      handleParityWrite(i, parityCellSize, true);
+      handleParityWrite(i, parityCellSize);
     }
   }
 
@@ -383,8 +383,8 @@ public class ECKeyOutputStream extends KeyOutputStream {
     return pos;
   }
 
-  private void handleParityWrite(int index, long len, boolean isFullCell) {
-    handleOutputStreamWrite(index, len, isFullCell, true);
+  private void handleParityWrite(int index, long len) {
+    handleOutputStreamWrite(index, len, true, true);
     blockOutputStreamEntryPool.getCurrentStreamEntry().useNextBlockStream();
   }
 
