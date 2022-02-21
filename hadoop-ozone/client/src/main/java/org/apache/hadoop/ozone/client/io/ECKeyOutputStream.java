@@ -181,7 +181,7 @@ public class ECKeyOutputStream extends KeyOutputStream {
         off += writtenLength;
       } catch (Exception e) {
         markStreamClosed();
-        throw new IOException(e);
+        throw new IOException(e.getMessage());
       }
     }
   }

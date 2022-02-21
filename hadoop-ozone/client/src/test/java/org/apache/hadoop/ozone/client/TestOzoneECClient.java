@@ -573,8 +573,8 @@ public class TestOzoneECClient {
         nodesIndexesToMarkFailure);
     // It should have used 3rd block group also. So, total initialized nodes
     // count should be clusterSize.
-    Assert.assertTrue(((MockXceiverClientFactory) factoryStub).getStorages()
-        .size() == clusterSize);
+    Assert.assertEquals(((MockXceiverClientFactory) factoryStub).getStorages()
+        .size(), clusterSize);
   }
 
   @Test
@@ -595,13 +595,13 @@ public class TestOzoneECClient {
         nodesIndexesToMarkFailure);
     // It should have used 3rd block group also. So, total initialized nodes
     // count should be clusterSize.
-    Assert.assertTrue(((MockXceiverClientFactory) factoryStub).getStorages()
-        .size() == clusterSize);
+    Assert.assertEquals(((MockXceiverClientFactory) factoryStub).getStorages()
+        .size(), clusterSize);
   }
 
-  @Test(expected = IllegalStateException.class)
-  // The mocked impl throws IllegalStateException when there are not enough
+  // The mocked impl throws IOException when there are not enough
   // nodes in allocateBlock request.
+  @Test(expected = IOException.class)
   public void testStripeWriteRetriesOnAllNodeFailures() throws IOException {
     OzoneConfiguration con = new OzoneConfiguration();
     con.setStorageSize(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE, 2, StorageUnit.KB);
@@ -667,8 +667,8 @@ public class TestOzoneECClient {
       for (int i = 0; i < dataBlocks; i++) {
         out.write(inputChunks[i]);
       }
-      Assert.assertTrue(
-          ((MockXceiverClientFactory) factoryStub).getStorages().size() == 5);
+      Assert.assertEquals(5, ((MockXceiverClientFactory) factoryStub)
+          .getStorages().size());
       List<DatanodeDetails> failedDNs = new ArrayList<>();
       List<HddsProtos.DatanodeDetailsProto> dns = blkAllocator.getClusterDns();
 
@@ -695,15 +695,15 @@ public class TestOzoneECClient {
       byte[] fileContent = new byte[chunkSize];
       for (int i = 0; i < dataBlocks; i++) {
         Assert.assertEquals(inputChunks[i].length, is.read(fileContent));
-        Assert.assertTrue("Expected: " + new String(inputChunks[i],
-                UTF_8) + " \n " + "Actual: " + new String(fileContent, UTF_8),
-            Arrays.equals(inputChunks[i], fileContent));
+        Assert.assertArrayEquals("Expected: " + new String(inputChunks[i],
+            UTF_8) + " \n " + "Actual: " + new String(fileContent, UTF_8),
+            inputChunks[i], fileContent);
       }
       for (int i = 0; i < numChunksToWriteAfterFailure; i++) {
         Assert.assertEquals(inputChunks[i].length, is.read(fileContent));
-        Assert.assertTrue("Expected: " + new String(inputChunks[i],
-                UTF_8) + " \n " + "Actual: " + new String(fileContent, UTF_8),
-            Arrays.equals(inputChunks[i], fileContent));
+        Assert.assertArrayEquals("Expected: " + new String(inputChunks[i],
+            UTF_8) + " \n " + "Actual: " + new String(fileContent, UTF_8),
+            inputChunks[i], fileContent);
       }
     }
   }
