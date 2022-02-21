@@ -64,7 +64,7 @@ public class ECBlockOutputStreamEntry extends BlockOutputStreamEntry {
   private final long length;
 
   private ECBlockOutputStream[] blockOutputStreams;
-  private int currentStreamIdx = 0;
+  private int currentStreamIndex = 0;
   private long successfulBlkGrpAckedLen;
 
   @SuppressWarnings({"parameternumber", "squid:S00107"})
@@ -87,7 +87,7 @@ public class ECBlockOutputStreamEntry extends BlockOutputStreamEntry {
       blockOutputStreams =
           new ECBlockOutputStream[replicationConfig.getRequiredNodes()];
     }
-    if (blockOutputStreams[currentStreamIdx] == null) {
+    if (blockOutputStreams[currentStreamIndex] == null) {
       createOutputStream();
     }
   }
@@ -96,11 +96,11 @@ public class ECBlockOutputStreamEntry extends BlockOutputStreamEntry {
   void createOutputStream() throws IOException {
     Pipeline ecPipeline = getPipeline();
     List<DatanodeDetails> nodes = getPipeline().getNodes();
-    blockOutputStreams[currentStreamIdx] = new ECBlockOutputStream(
+    blockOutputStreams[currentStreamIndex] = new ECBlockOutputStream(
         getBlockID(),
         getXceiverClientManager(),
         createSingleECBlockPipeline(
-            ecPipeline, nodes.get(currentStreamIdx), currentStreamIdx + 1),
+            ecPipeline, nodes.get(currentStreamIndex), currentStreamIndex + 1),
         getBufferPool(),
         getConf(),
         getToken());
@@ -111,8 +111,8 @@ public class ECBlockOutputStreamEntry extends BlockOutputStreamEntry {
     if (!isInitialized()) {
       return null;
     }
-    checkState(blockOutputStreams[currentStreamIdx] != null);
-    return blockOutputStreams[currentStreamIdx];
+    checkState(blockOutputStreams[currentStreamIndex] != null);
+    return blockOutputStreams[currentStreamIndex];
   }
 
   @Override
@@ -125,27 +125,27 @@ public class ECBlockOutputStreamEntry extends BlockOutputStreamEntry {
     return length;
   }
 
-  public int getCurrentStreamIdx() {
-    return currentStreamIdx;
+  public int getCurrentStreamIndex() {
+    return currentStreamIndex;
   }
 
   public void useNextBlockStream() {
-    currentStreamIdx =
-        (currentStreamIdx + 1) % replicationConfig.getRequiredNodes();
+    currentStreamIndex =
+        (currentStreamIndex + 1) % replicationConfig.getRequiredNodes();
   }
 
   public void markFailed(Exception e) {
-    if (blockOutputStreams[currentStreamIdx] != null) {
-      blockOutputStreams[currentStreamIdx].setIoException(e);
+    if (blockOutputStreams[currentStreamIndex] != null) {
+      blockOutputStreams[currentStreamIndex].setIoException(e);
     }
   }
 
   public void forceToFirstParityBlock() {
-    currentStreamIdx = replicationConfig.getData();
+    currentStreamIndex = replicationConfig.getData();
   }
 
   public void resetToFirstEntry() {
-    currentStreamIdx = 0;
+    currentStreamIndex = 0;
   }
 
   @Override
@@ -170,7 +170,7 @@ public class ECBlockOutputStreamEntry extends BlockOutputStreamEntry {
       return;
     }
     for (int i = 0;
-         i <= currentStreamIdx && i < blockOutputStreams.length; i++) {
+         i <= currentStreamIndex && i < blockOutputStreams.length; i++) {
       if (blockOutputStreams[i] != null) {
         blockOutputStreams[i].flush();
       }
@@ -368,7 +368,7 @@ public class ECBlockOutputStreamEntry extends BlockOutputStreamEntry {
   }
 
   private boolean isWritingParity() {
-    return currentStreamIdx >= replicationConfig.getData();
+    return currentStreamIndex >= replicationConfig.getData();
   }
 
   private Stream<ECBlockOutputStream> blockStreams() {
