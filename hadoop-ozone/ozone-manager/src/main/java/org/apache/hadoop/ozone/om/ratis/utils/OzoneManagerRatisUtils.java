@@ -39,6 +39,7 @@ import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer.RaftServerStatus
 import org.apache.hadoop.ozone.om.request.OMKeyRequestFactory;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketCreateRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketDeleteRequest;
+import org.apache.hadoop.ozone.om.request.bucket.OMBucketSetOwnerRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketSetPropertyRequest;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.request.bucket.acl.OMBucketAddAclRequest;
@@ -69,7 +70,7 @@ import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetQuotaRequest;
 import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeAddAclRequest;
 import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeRemoveAclRequest;
 import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeSetAclRequest;
-import org.apache.hadoop.ozone.om.response.key.OMOpenKeysDeleteRequest;
+import org.apache.hadoop.ozone.om.request.key.OMOpenKeysDeleteRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneObj.ObjectType;
@@ -142,7 +143,13 @@ public final class OzoneManagerRatisUtils {
     case DeleteBucket:
       return new OMBucketDeleteRequest(omRequest);
     case SetBucketProperty:
-      return new OMBucketSetPropertyRequest(omRequest);
+      boolean hasBucketOwner = omRequest.getSetBucketPropertyRequest()
+          .getBucketArgs().hasOwnerName();
+      if (hasBucketOwner) {
+        return new OMBucketSetOwnerRequest(omRequest);
+      } else {
+        return new OMBucketSetPropertyRequest(omRequest);
+      }
     case AddAcl:
     case RemoveAcl:
     case SetAcl:

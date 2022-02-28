@@ -55,7 +55,7 @@ public class TestMiniOzoneOMHACluster {
   public ExpectedException exception = ExpectedException.none();
 
   @Rule
-  public Timeout timeout = Timeout.seconds(300);;
+  public Timeout timeout = Timeout.seconds(300);
 
   /**
    * Create a MiniOzoneHAClusterImpl for testing.

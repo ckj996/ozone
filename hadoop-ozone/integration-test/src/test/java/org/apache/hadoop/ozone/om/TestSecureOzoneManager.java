@@ -53,7 +53,8 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_OPEN_KEY_EXPIRE_THRESHOLD;
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
-import static org.apache.ozone.test.GenericTestUtils.*;
+import static org.apache.ozone.test.GenericTestUtils.LogCapturer;
+import static org.apache.ozone.test.GenericTestUtils.getTempPath;
 
 /**
  * Test secure Ozone Manager operation in distributed handler scenario.
