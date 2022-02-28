@@ -36,7 +36,7 @@ import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
+import org.apache.hadoop.ozone.om.request.OMRequestTestUtils;
 import org.apache.ozone.test.LambdaTestUtils;
 import org.apache.ratis.util.TimeDuration;
 import org.junit.After;
@@ -568,17 +568,17 @@ public class TestOpenKeyCleanupService {
 
       long clientID = RANDOM.nextLong();
 
-      OmKeyInfo keyInfo = TestOMRequestUtils.createOmKeyInfo(volume,
+      OmKeyInfo keyInfo = OMRequestTestUtils.createOmKeyInfo(volume,
           bucket, key, HddsProtos.ReplicationType.RATIS,
           HddsProtos.ReplicationFactor.ONE, 0L, creationTime);
 
       if (numBlocks > 0) {
-        TestOMRequestUtils.addKeyLocationInfo(keyInfo, 0, numBlocks);
+        OMRequestTestUtils.addKeyLocationInfo(keyInfo, 0, numBlocks);
       }
 
       // Insert keys into every ozone manager's DB.
       for (OzoneManager om: ozoneManagers) {
-        TestOMRequestUtils.addKeyToTable(true, false,
+        OMRequestTestUtils.addKeyToTable(true, false,
             keyInfo, clientID, 0L, om.getMetadataManager());
 
         String fullKeyName = om.getMetadataManager().getOpenKey(volume, bucket,
