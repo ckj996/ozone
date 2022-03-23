@@ -34,8 +34,6 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.hdds.client.ECReplicationConfig;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
-import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
-import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -597,10 +595,12 @@ public abstract class OMKeyRequest extends OMClientRequest {
       String volume, String bucket) {
     String bucketKey = omMetadataManager.getBucketKey(volume, bucket);
 
-    CacheValue<OmBucketInfo> value = omMetadataManager.getBucketTable()
-        .getCacheValue(new CacheKey<>(bucketKey));
-
-    return value != null ? value.getCacheValue() : null;
+    try {
+      return omMetadataManager.getBucketTable().get(bucketKey);
+    } catch (IOException e) {
+      LOG.warn("Failed to get BucketInfo of {}/{}: {}", volume, bucket, e);
+      return null;
+    }
   }
 
   /**
