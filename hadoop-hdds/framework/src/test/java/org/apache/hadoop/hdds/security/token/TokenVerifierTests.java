@@ -22,7 +22,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerC
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.security.token.Token;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +36,6 @@ import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -125,7 +125,7 @@ public abstract class TokenVerifierTests<T extends ShortLivedTokenIdentifier> {
     TokenVerifier subject = newTestSubject(tokenEnabled(), caClient);
 
     // WHEN+THEN
-    assertThrows(BlockTokenException.class, () ->
+    Assertions.assertThrows(BlockTokenException.class, () ->
         subject.verify("anyUser", anyToken(), cmd));
   }
 
@@ -140,7 +140,7 @@ public abstract class TokenVerifierTests<T extends ShortLivedTokenIdentifier> {
     TokenVerifier subject = newTestSubject(tokenEnabled(), caClient);
 
     // WHEN+THEN
-    assertThrows(BlockTokenException.class, () ->
+    Assertions.assertThrows(BlockTokenException.class, () ->
         subject.verify("anyUser", invalidToken, cmd));
   }
 
@@ -158,7 +158,7 @@ public abstract class TokenVerifierTests<T extends ShortLivedTokenIdentifier> {
     TokenVerifier subject = newTestSubject(tokenEnabled(), caClient);
 
     // WHEN+THEN
-    assertThrows(BlockTokenException.class, () ->
+    Assertions.assertThrows(BlockTokenException.class, () ->
         subject.verify("anyUser", token, cmd));
   }
 

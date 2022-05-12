@@ -22,10 +22,10 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.exceptions.CertificateException;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.bouncycastle.cert.X509CertificateHolder;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -56,11 +56,6 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_NAMES;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.FAILURE;
 import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec.getPEMEncodedString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test class for {@link DefaultCertificateClient}.
@@ -81,7 +76,7 @@ public class TestDefaultCertificateClient {
   private KeyCodec omKeyCodec;
   private KeyCodec dnKeyCodec;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     OzoneConfiguration config = new OzoneConfiguration();
     config.setStrings(OZONE_SCM_NAMES, "localhost");
@@ -116,7 +111,7 @@ public class TestDefaultCertificateClient {
     dnCertClient = new DNCertificateClient(dnSecurityConfig, certSerialId);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     omCertClient = null;
     dnCertClient = null;
@@ -133,17 +128,17 @@ public class TestDefaultCertificateClient {
     cleanupOldKeyPair();
     PrivateKey pvtKey = omCertClient.getPrivateKey();
     PublicKey publicKey = omCertClient.getPublicKey();
-    assertNull(publicKey);
-    assertNull(pvtKey);
+    Assertions.assertNull(publicKey);
+    Assertions.assertNull(pvtKey);
 
     KeyPair keyPair = generateKeyPairFiles();
     pvtKey = omCertClient.getPrivateKey();
-    assertNotNull(pvtKey);
-    assertEquals(pvtKey, keyPair.getPrivate());
+    Assertions.assertNotNull(pvtKey);
+    Assertions.assertEquals(pvtKey, keyPair.getPrivate());
 
     publicKey = dnCertClient.getPublicKey();
-    assertNotNull(publicKey);
-    assertEquals(publicKey, keyPair.getPublic());
+    Assertions.assertNotNull(publicKey);
+    Assertions.assertEquals(publicKey, keyPair.getPublic());
   }
 
   private KeyPair generateKeyPairFiles() throws Exception {
@@ -178,15 +173,15 @@ public class TestDefaultCertificateClient {
   @Test
   public void testCertificateOps() throws Exception {
     X509Certificate cert = omCertClient.getCertificate();
-    assertNull(cert);
+    Assertions.assertNull(cert);
     omCertClient.storeCertificate(getPEMEncodedString(x509Certificate),
         true);
 
     cert = omCertClient.getCertificate(
         x509Certificate.getSerialNumber().toString());
-    assertNotNull(cert);
-    assertTrue(cert.getEncoded().length > 0);
-    assertEquals(cert, x509Certificate);
+    Assertions.assertNotNull(cert);
+    Assertions.assertTrue(cert.getEncoded().length > 0);
+    Assertions.assertEquals(x509Certificate, cert);
 
     // TODO: test verifyCertificate once implemented.
   }
@@ -223,14 +218,13 @@ public class TestDefaultCertificateClient {
   /**
    * Validate hash using public key of KeyPair.
    */
-  private void validateHash(byte[] hash, byte[] data)
-      throws Exception {
+  private void validateHash(byte[] hash, byte[] data) throws Exception {
     Signature rsaSignature =
         Signature.getInstance(omSecurityConfig.getSignatureAlgo(),
             omSecurityConfig.getProvider());
     rsaSignature.initVerify(omCertClient.getPublicKey());
     rsaSignature.update(data);
-    Assert.assertTrue(rsaSignature.verify(hash));
+    Assertions.assertTrue(rsaSignature.verify(hash));
   }
 
   /**
@@ -243,17 +237,17 @@ public class TestDefaultCertificateClient {
         UTF_8));
 
     // Positive tests.
-    assertTrue(omCertClient.verifySignature(data.getBytes(UTF_8), sign,
-        x509Certificate));
-    assertTrue(omCertClient.verifySignature(
+    Assertions.assertTrue(omCertClient.verifySignature(data.getBytes(UTF_8),
+        sign, x509Certificate));
+    Assertions.assertTrue(omCertClient.verifySignature(
         IOUtils.toInputStream(data, UTF_8),
         sign, x509Certificate));
 
     // Negative tests.
-    assertFalse(omCertClient.verifySignature(data.getBytes(UTF_8),
+    Assertions.assertFalse(omCertClient.verifySignature(data.getBytes(UTF_8),
         "abc".getBytes(UTF_8), x509Certificate));
-    assertFalse(omCertClient.verifySignature(IOUtils.toInputStream(data,
-        UTF_8), "abc".getBytes(UTF_8), x509Certificate));
+    Assertions.assertFalse(omCertClient.verifySignature(IOUtils.toInputStream(
+        data, UTF_8), "abc".getBytes(UTF_8), x509Certificate));
 
   }
 
@@ -266,17 +260,17 @@ public class TestDefaultCertificateClient {
     byte[] sign = omCertClient.signData(data.getBytes(UTF_8));
 
     // Positive tests.
-    assertTrue(omCertClient.verifySignature(data.getBytes(UTF_8), sign,
-        x509Certificate));
-    assertTrue(omCertClient.verifySignature(
+    Assertions.assertTrue(omCertClient.verifySignature(data.getBytes(UTF_8),
+        sign, x509Certificate));
+    Assertions.assertTrue(omCertClient.verifySignature(
         IOUtils.toInputStream(data, UTF_8),
         sign, x509Certificate));
 
     // Negative tests.
-    assertFalse(omCertClient.verifySignature(data.getBytes(UTF_8),
+    Assertions.assertFalse(omCertClient.verifySignature(data.getBytes(UTF_8),
         "abc".getBytes(UTF_8), x509Certificate));
-    assertFalse(omCertClient.verifySignature(IOUtils.toInputStream(data,
-        UTF_8), "abc".getBytes(UTF_8), x509Certificate));
+    Assertions.assertFalse(omCertClient.verifySignature(IOUtils.toInputStream(
+        data, UTF_8), "abc".getBytes(UTF_8), x509Certificate));
 
   }
 
@@ -321,11 +315,11 @@ public class TestDefaultCertificateClient {
     // Re instantiate DN client which will load certificates from filesystem.
     dnCertClient = new DNCertificateClient(dnSecurityConfig, certSerialId);
 
-    assertNotNull(dnCertClient.getCertificate(cert1.getSerialNumber()
+    Assertions.assertNotNull(dnCertClient.getCertificate(cert1.getSerialNumber()
         .toString()));
-    assertNotNull(dnCertClient.getCertificate(cert2.getSerialNumber()
+    Assertions.assertNotNull(dnCertClient.getCertificate(cert2.getSerialNumber()
         .toString()));
-    assertNotNull(dnCertClient.getCertificate(cert3.getSerialNumber()
+    Assertions.assertNotNull(dnCertClient.getCertificate(cert3.getSerialNumber()
         .toString()));
 
   }
@@ -341,11 +335,11 @@ public class TestDefaultCertificateClient {
     dnCertClient.storeCertificate(getPEMEncodedString(cert2), true);
     dnCertClient.storeCertificate(getPEMEncodedString(cert3), true);
 
-    assertNotNull(dnCertClient.getCertificate(cert1.getSerialNumber()
+    Assertions.assertNotNull(dnCertClient.getCertificate(cert1.getSerialNumber()
         .toString()));
-    assertNotNull(dnCertClient.getCertificate(cert2.getSerialNumber()
+    Assertions.assertNotNull(dnCertClient.getCertificate(cert2.getSerialNumber()
         .toString()));
-    assertNotNull(dnCertClient.getCertificate(cert3.getSerialNumber()
+    Assertions.assertNotNull(dnCertClient.getCertificate(cert3.getSerialNumber()
         .toString()));
   }
 
@@ -385,16 +379,16 @@ public class TestDefaultCertificateClient {
 
 
     // Check for DN.
-    assertEquals(dnCertClient.init(), FAILURE);
-    assertTrue(dnClientLog.getOutput().contains("Keypair validation " +
-        "failed"));
+    Assertions.assertEquals(FAILURE, dnCertClient.init());
+    Assertions.assertTrue(dnClientLog.getOutput()
+        .contains("Keypair validation failed"));
     dnClientLog.clearOutput();
     omClientLog.clearOutput();
 
     // Check for OM.
-    assertEquals(omCertClient.init(), FAILURE);
-    assertTrue(omClientLog.getOutput().contains("Keypair validation " +
-        "failed"));
+    Assertions.assertEquals(FAILURE, omCertClient.init());
+    Assertions.assertTrue(omClientLog.getOutput()
+        .contains("Keypair validation failed"));
     dnClientLog.clearOutput();
     omClientLog.clearOutput();
 
@@ -418,15 +412,16 @@ public class TestDefaultCertificateClient {
     dnCertCodec.writeCertificate(new X509CertificateHolder(
         x509Certificate.getEncoded()));
     // Check for DN.
-    assertEquals(dnCertClient.init(), FAILURE);
-    assertTrue(dnClientLog.getOutput().contains("Keypair validation " +
-        "failed"));
+    Assertions.assertEquals(FAILURE, dnCertClient.init());
+    Assertions.assertTrue(dnClientLog.getOutput()
+        .contains("Keypair validation failed"));
     dnClientLog.clearOutput();
     omClientLog.clearOutput();
 
     // Check for OM.
-    assertEquals(omCertClient.init(), FAILURE);
-    assertTrue(omClientLog.getOutput().contains("Keypair validation failed"));
+    Assertions.assertEquals(FAILURE, omCertClient.init());
+    Assertions.assertTrue(omClientLog.getOutput()
+        .contains("Keypair validation failed"));
     dnClientLog.clearOutput();
     omClientLog.clearOutput();
 
@@ -445,16 +440,16 @@ public class TestDefaultCertificateClient {
     dnKeyCodec.writePublicKey(keyPair.getPublic());
 
     // Check for DN.
-    assertEquals(dnCertClient.init(), FAILURE);
-    assertTrue(dnClientLog.getOutput().contains("Stored certificate is " +
-        "generated with different"));
+    Assertions.assertEquals(FAILURE, dnCertClient.init());
+    Assertions.assertTrue(dnClientLog.getOutput()
+        .contains("Stored certificate is generated with different"));
     dnClientLog.clearOutput();
     omClientLog.clearOutput();
 
     //Check for OM.
-    assertEquals(omCertClient.init(), FAILURE);
-    assertTrue(omClientLog.getOutput().contains("Stored certificate is " +
-        "generated with different"));
+    Assertions.assertEquals(FAILURE, omCertClient.init());
+    Assertions.assertTrue(omClientLog.getOutput()
+        .contains("Stored certificate is generated with different"));
     dnClientLog.clearOutput();
     omClientLog.clearOutput();
 
@@ -468,12 +463,14 @@ public class TestDefaultCertificateClient {
         dnSecurityConfig.getPublicKeyFileName()).toFile());
 
     // Check for DN.
-    assertEquals(dnCertClient.init(), FAILURE);
-    assertTrue(dnClientLog.getOutput().contains("Can't recover public key"));
+    Assertions.assertEquals(FAILURE, dnCertClient.init());
+    Assertions.assertTrue(dnClientLog.getOutput()
+        .contains("Can't recover public key"));
 
     // Check for OM.
-    assertEquals(omCertClient.init(), FAILURE);
-    assertTrue(omClientLog.getOutput().contains("Can't recover public key"));
+    Assertions.assertEquals(FAILURE, omCertClient.init());
+    Assertions.assertTrue(omClientLog.getOutput()
+        .contains("Can't recover public key"));
     dnClientLog.clearOutput();
     omClientLog.clearOutput();
   }

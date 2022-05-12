@@ -19,11 +19,11 @@ package org.apache.hadoop.hdds.server.http;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.eclipse.jetty.server.ServerConnector;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 
-import static org.junit.Assert.assertEquals;
 
 /**
  * Testing HttpServer2.
@@ -48,7 +48,7 @@ public class TestHttpServer2 {
             .build();
     for (ServerConnector server : srv.getListeners()) {
       // Check default value in ozone-default.xml
-      assertEquals(60000, server.getIdleTimeout());
+      Assertions.assertEquals(60000, server.getIdleTimeout());
     }
   }
 }
