@@ -140,28 +140,47 @@ public class TestHddsClientUtils {
   }
 
   @Test
-  public void testgetOmSocketAddress() {
+  public void testGetOmSocketAddress() {
     final OzoneConfiguration conf = new OzoneConfiguration();
+
+    // TODO: migrate to JUnit5 ParameterizedTest
 
     // First try a client address with just a host name. Verify it falls
     // back to the default port.
     conf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "1.2.3.4");
+    conf.unset(OMConfigKeys.OZONE_OM_PORT_KEY);
     InetSocketAddress addr = OmUtils.getOmAddress(conf);
-    assertThat(addr.getHostString(), is("1.2.3.4"));
-    assertThat(addr.getPort(), is(OMConfigKeys.OZONE_OM_PORT_DEFAULT));
+    assertEquals("1.2.3.4", addr.getHostString());
+    assertEquals(OMConfigKeys.OZONE_OM_PORT_DEFAULT, addr.getPort());
 
     // Next try a client address with just a host name and port. Verify the port
     // is ignored and the default OM port is used.
     conf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "1.2.3.4:100");
+    conf.unset(OMConfigKeys.OZONE_OM_PORT_KEY);
     addr = OmUtils.getOmAddress(conf);
-    assertThat(addr.getHostString(), is("1.2.3.4"));
-    assertThat(addr.getPort(), is(100));
+    assertEquals("1.2.3.4", addr.getHostString());
+    assertEquals(100, addr.getPort());
 
     // Assert the we are able to use default configs if no value is specified.
     conf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "");
+    conf.unset(OMConfigKeys.OZONE_OM_PORT_KEY);
     addr = OmUtils.getOmAddress(conf);
-    assertThat(addr.getHostString(), is("0.0.0.0"));
-    assertThat(addr.getPort(), is(OMConfigKeys.OZONE_OM_PORT_DEFAULT));
+    assertEquals("0.0.0.0", addr.getHostString());
+    assertEquals(OMConfigKeys.OZONE_OM_PORT_DEFAULT, addr.getPort());
+
+    // If port is only set in "ozone.om.port", use it's value
+    conf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "1.2.3.4");
+    conf.set(OMConfigKeys.OZONE_OM_PORT_KEY, "1234");
+    addr = OmUtils.getOmAddress(conf);
+    assertEquals("1.2.3.4", addr.getHostString());
+    assertEquals(1234, addr.getPort());
+
+    // If both port is set, use the port in "ozone.om.address"
+    conf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "1.2.3.4:100");
+    conf.set(OMConfigKeys.OZONE_OM_PORT_KEY, "1234");
+    addr = OmUtils.getOmAddress(conf);
+    assertEquals("1.2.3.4", addr.getHostString());
+    assertEquals(100, addr.getPort());
   }
 
   @Test

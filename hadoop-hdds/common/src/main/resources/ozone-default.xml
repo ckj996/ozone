@@ -507,7 +507,16 @@
     <tag>OM, REQUIRED</tag>
     <description>
       The address of the Ozone OM service. This allows clients to discover
-      the address of the OM.
+      the address of the OM. If port is missing, ozone.om.port will be used.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.port</name>
+    <value>9862</value>
+    <tag>OM</tag>
+    <description>
+      The port number of the Ozone OM service. This value will only take effect
+      when port is missing in ozone.om.address.
     </description>
   </property>
   <property>

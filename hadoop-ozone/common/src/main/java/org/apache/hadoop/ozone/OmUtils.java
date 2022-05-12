@@ -69,6 +69,7 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_BIND_PORT_DE
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_INTERNAL_SERVICE_ID;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_NODES_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_PORT_DEFAULT;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_PORT_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY;
 
 import org.slf4j.Logger;
@@ -215,7 +216,7 @@ public final class OmUtils {
 
   public static int getOmRpcPort(ConfigurationSource conf) {
     return getPortNumberFromConfigKeys(conf, OZONE_OM_ADDRESS_KEY)
-        .orElse(OZONE_OM_PORT_DEFAULT);
+        .orElse(conf.getInt(OZONE_OM_PORT_KEY, OZONE_OM_PORT_DEFAULT));
   }
 
   /**
@@ -227,7 +228,7 @@ public final class OmUtils {
    */
   public static int getOmRpcPort(ConfigurationSource conf, String confKey) {
     return getPortNumberFromConfigKeys(conf, confKey)
-        .orElse(OZONE_OM_PORT_DEFAULT);
+        .orElse(conf.getInt(OZONE_OM_PORT_KEY, OZONE_OM_PORT_DEFAULT));
   }
 
   public static int getOmRestPort(ConfigurationSource conf) {
