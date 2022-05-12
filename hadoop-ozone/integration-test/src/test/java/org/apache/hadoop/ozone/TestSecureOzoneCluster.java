@@ -108,6 +108,7 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_KERBEROS_PRI
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_PORT_KEY;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_EXPIRED;
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
 import org.apache.ratis.protocol.ClientId;
@@ -183,7 +184,8 @@ public final class TestSecureOzoneCluster {
       // use the same base ports as MiniOzoneHACluster
       conf.setInt(OZONE_SCM_RATIS_PORT_KEY, getPort(1200, 100));
       conf.setInt(OZONE_SCM_GRPC_PORT_KEY, getPort(1201, 100));
-      conf.set(OZONE_OM_ADDRESS_KEY, "localhost:1202");
+      conf.set(OZONE_OM_ADDRESS_KEY, "localhost");
+      conf.setInt(OZONE_OM_PORT_KEY, getPort(1202, 100));
 
 
       DefaultMetricsSystem.setMiniClusterMode(true);
