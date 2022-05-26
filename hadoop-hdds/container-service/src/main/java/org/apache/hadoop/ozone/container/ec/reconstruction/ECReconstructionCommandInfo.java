@@ -35,17 +35,20 @@ public class ECReconstructionCommandInfo {
   private List<ReconstructECContainersCommand.DatanodeDetailsAndReplicaIndex>
       sources;
   private List<DatanodeDetails> targetDatanodes;
+  private DatanodeDetails coordinatorDatanode;
 
   public ECReconstructionCommandInfo(long containerID,
       ECReplicationConfig ecReplicationConfig, byte[] missingContainerIndexes,
       List<DatanodeDetailsAndReplicaIndex> sources,
-      List<DatanodeDetails> targetDatanodes) {
+      List<DatanodeDetails> targetDatanodes,
+      DatanodeDetails coordinatorDatanode) {
     this.containerID = containerID;
     this.ecReplicationConfig = ecReplicationConfig;
     this.missingContainerIndexes =
         Arrays.copyOf(missingContainerIndexes, missingContainerIndexes.length);
     this.sources = sources;
     this.targetDatanodes = targetDatanodes;
+    this.coordinatorDatanode = coordinatorDatanode;
   }
 
   public long getContainerID() {
@@ -67,6 +70,10 @@ public class ECReconstructionCommandInfo {
 
   public List<DatanodeDetails> getTargetDatanodes() {
     return targetDatanodes;
+  }
+
+  public DatanodeDetails getCoordinatorDatanode() {
+    return coordinatorDatanode;
   }
 
   @Override

@@ -61,6 +61,8 @@ import org.apache.hadoop.ozone.container.common.volume.MutableVolumeSet;
 import org.apache.hadoop.ozone.container.common.volume.StorageVolume;
 import org.apache.hadoop.ozone.container.common.volume.StorageVolume.VolumeType;
 import org.apache.hadoop.ozone.container.common.volume.StorageVolumeChecker;
+import org.apache.hadoop.ozone.container.ec.ContainerRecoveryStore;
+import org.apache.hadoop.ozone.container.ec.ContainerRecoveryStoreImpl;
 import org.apache.hadoop.ozone.container.keyvalue.statemachine.background.BlockDeletingService;
 import org.apache.hadoop.ozone.container.replication.ReplicationServer;
 import org.apache.hadoop.ozone.container.replication.ReplicationServer.ReplicationConfig;
@@ -108,6 +110,7 @@ public class OzoneContainer {
   private final ReplicationServer replicationServer;
   private DatanodeDetails datanodeDetails;
   private StateContext context;
+  private final ContainerRecoveryStore tempStore;
 
   enum InitializingStatus {
     UNINITIALIZED, INITIALIZING, INITIALIZED
@@ -186,11 +189,15 @@ public class OzoneContainer {
         datanodeDetails, config, hddsDispatcher, controller, certClient,
         context);
 
+    tempStore = new ContainerRecoveryStoreImpl(volumeSet, config);
+
     replicationServer = new ReplicationServer(
         controller,
         conf.getObject(ReplicationConfig.class),
         secConf,
-        certClient);
+        certClient,
+        hddsDispatcher,
+        tempStore);
 
     readChannel = new XceiverServerGrpc(
         datanodeDetails, config, hddsDispatcher, certClient);
@@ -464,5 +471,9 @@ public class OzoneContainer {
   @VisibleForTesting
   StorageVolumeChecker getVolumeChecker(ConfigurationSource conf) {
     return new StorageVolumeChecker(conf, new Timer());
+  }
+
+  public ContainerRecoveryStore getTempStore() {
+    return tempStore;
   }
 }

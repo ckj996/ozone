@@ -35,6 +35,7 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.report.IncrementalReportSender;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
+import org.apache.hadoop.ozone.container.ec.ContainerRecoveryStore;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
 
@@ -126,6 +127,18 @@ public abstract class Handler {
       Container container,
       OutputStream outputStream,
       TarContainerPacker packer)
+      throws IOException;
+
+  /**
+   * Consolidate a container from a temp store.
+   * @param containerID
+   * @param recoveryStore
+   * @return
+   * @throws IOException
+   */
+  public abstract Container consolidateContainer(
+      long containerID,
+      ContainerRecoveryStore recoveryStore)
       throws IOException;
 
   /**

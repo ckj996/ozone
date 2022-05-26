@@ -189,5 +189,11 @@ public class ReconstructECContainersCommand
     public int hashCode() {
       return Objects.hash(dnDetails, replicaIndex);
     }
+
+    @Override
+    public String toString() {
+      return "{ DatanodeUUID = " + dnDetails.getUuidString() +
+          ": ReplicaIndex = " + replicaIndex + " }";
+    }
   }
 }

@@ -243,11 +243,6 @@ class RDBTable implements Table<byte[], byte[]> {
       if (startKey == null) {
         it.seekToFirst();
       } else {
-        if ((prefix == null || startKey.length > prefix.length)
-            && get(startKey) == null) {
-          // Key not found, return empty list
-          return result;
-        }
         it.seek(startKey);
       }
 

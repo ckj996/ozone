@@ -42,7 +42,7 @@ public class TestECReconstructionSupervisor {
     private boolean isExecuted = false;
 
     FakeTask(ECReconstructionCommandInfo reconstructionCommandInfo) {
-      super(reconstructionCommandInfo);
+      super(reconstructionCommandInfo, null, null, null, null, null);
     }
 
     @Override

@@ -195,7 +195,9 @@ public class DatanodeStateMachine implements Closeable {
             dnConf.getBlockDeleteQueueLimit()))
         .addHandler(new ReplicateContainerCommandHandler(conf, supervisor))
         .addHandler(new ReconstructECContainersCommandHandler(conf,
-            ecReconstructionSupervisor))
+            ecReconstructionSupervisor, getContainer().getVolumeSet(),
+            getContainer().getTempStore(), getContainer().getController(),
+            dnCertClient))
         .addHandler(new DeleteContainerCommandHandler(
             dnConf.getContainerDeleteThreads()))
         .addHandler(new ClosePipelineCommandHandler())

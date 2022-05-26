@@ -531,7 +531,7 @@ public class TestRDBTableStore {
       startKey = StringUtils.string2Bytes(
           StringUtils.bytes2String(samplePrefix) + 123);
       rangeKVs = testTable.getRangeKVs(startKey, 10, samplePrefix);
-      Assert.assertEquals(0, rangeKVs.size());
+      Assert.assertEquals(3, rangeKVs.size());
     }
   }
 

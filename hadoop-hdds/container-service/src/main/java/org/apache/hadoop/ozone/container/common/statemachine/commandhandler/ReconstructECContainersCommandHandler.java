@@ -17,13 +17,21 @@
  */
 package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.io.ByteBufferPool;
+import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
+import org.apache.hadoop.ozone.container.common.volume.MutableVolumeSet;
+import org.apache.hadoop.ozone.container.ec.ContainerRecoveryStore;
 import org.apache.hadoop.ozone.container.ec.reconstruction.ECReconstructionCommandInfo;
 import org.apache.hadoop.ozone.container.ec.reconstruction.ECReconstructionCoordinatorTask;
 import org.apache.hadoop.ozone.container.ec.reconstruction.ECReconstructionSupervisor;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.ReconstructECContainersCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
@@ -35,11 +43,23 @@ public class ReconstructECContainersCommandHandler implements CommandHandler {
 
   private ECReconstructionSupervisor supervisor;
   private ConfigurationSource conf;
+  private final MutableVolumeSet volumeSet;
+  private final ContainerRecoveryStore tempStore;
+  private final ContainerController controller;
+  private final CertificateClient certClient;
+  private final ByteBufferPool bufferPool;
 
   public ReconstructECContainersCommandHandler(ConfigurationSource conf,
-      ECReconstructionSupervisor supervisor) {
+      ECReconstructionSupervisor supervisor, MutableVolumeSet volumeSet,
+      ContainerRecoveryStore tempStore, ContainerController controller,
+      CertificateClient certClient) {
     this.conf = conf;
     this.supervisor = supervisor;
+    this.volumeSet = volumeSet;
+    this.tempStore = tempStore;
+    this.controller = controller;
+    this.certClient = certClient;
+    this.bufferPool = new ElasticByteBufferPool();
   }
 
   @Override
@@ -47,14 +67,21 @@ public class ReconstructECContainersCommandHandler implements CommandHandler {
       StateContext context, SCMConnectionManager connectionManager) {
     ReconstructECContainersCommand ecContainersCommand =
         (ReconstructECContainersCommand) command;
+    DatanodeDetails thisDN = ecContainersCommand.getTargetDatanodes().stream()
+        .filter(dn -> dn.getUuidString().equals(volumeSet.getDatanodeUuid()))
+        .findAny().orElse(null);
+    Preconditions.checkArgument(thisDN != null,
+        "CoordinatorDN must be one of the TargetDN");
     ECReconstructionCommandInfo reconstructionCommandInfo =
         new ECReconstructionCommandInfo(ecContainersCommand.getContainerID(),
             ecContainersCommand.getEcReplicationConfig(),
             ecContainersCommand.getMissingContainerIndexes(),
             ecContainersCommand.getSources(),
-            ecContainersCommand.getTargetDatanodes());
+            ecContainersCommand.getTargetDatanodes(),
+            thisDN);
     this.supervisor.addTask(
-        new ECReconstructionCoordinatorTask(reconstructionCommandInfo));
+        new ECReconstructionCoordinatorTask(reconstructionCommandInfo, conf,
+            tempStore, controller, bufferPool, certClient));
   }
 
   @Override

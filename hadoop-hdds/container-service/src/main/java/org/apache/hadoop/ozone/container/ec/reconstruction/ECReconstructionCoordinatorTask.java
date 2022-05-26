@@ -17,31 +17,89 @@
  */
 package org.apache.hadoop.ozone.container.ec.reconstruction;
 
+import org.apache.hadoop.hdds.conf.ConfigurationSource;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.io.ByteBufferPool;
+import org.apache.hadoop.ozone.container.ec.ContainerRecoveryStore;
+import org.apache.hadoop.ozone.container.ec.ECContainerRecoverHelper;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
+import org.apache.hadoop.ozone.container.replication.ECContainerDownloader;
+import org.apache.hadoop.ozone.container.replication.ECContainerDownloaderImpl;
+import org.apache.hadoop.ozone.protocol.commands.ReconstructECContainersCommand.DatanodeDetailsAndReplicaIndex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * This is the actual EC reconstruction coordination task.
  */
 public class ECReconstructionCoordinatorTask implements Runnable {
+
+  static final Logger LOG =
+      LoggerFactory.getLogger(ECReconstructionCoordinatorTask.class);
   private ECReconstructionCommandInfo reconstructionCommandInfo;
+  private final ConfigurationSource conf;
+  private final ContainerRecoveryStore tempStore;
+  private final ContainerController controller;
+  private final ByteBufferPool bufferPool;
+  private final CertificateClient certClient;
 
   public ECReconstructionCoordinatorTask(
-      ECReconstructionCommandInfo reconstructionCommandInfo) {
+      ECReconstructionCommandInfo reconstructionCommandInfo,
+      ConfigurationSource conf,
+      ContainerRecoveryStore tempStore,
+      ContainerController controller,
+      ByteBufferPool bufferPool,
+      CertificateClient certClient) {
     this.reconstructionCommandInfo = reconstructionCommandInfo;
+    this.conf = conf;
+    this.tempStore = tempStore;
+    this.controller = controller;
+    this.bufferPool = bufferPool;
+    this.certClient = certClient;
   }
 
   @Override
   public void run() {
     // Implement the coordinator logic to handle a container group
     // reconstruction.
+    LOG.info("Running EC reconstruction task {}", this);
 
-    // 1. Read container block meta info from the available min required good
-    // containers. ( Full block set should be available with 1st or parity
-    // indexes containers)
-    // 2. Find out the total number of blocks
-    // 3. Loop each block and use the ReconstructedInputStreams(HDDS-6665) and
-    // recover.
-    // 4. Write the recovered chunks to given targets/write locally to
-    // respective container. HDDS-6582
-    // 5. Close/finalize the recovered containers.
+    ECContainerDownloader downloader =
+        new ECContainerDownloaderImpl(conf, certClient);
+    ECContainerRecoverHelper helper = new ECContainerRecoverHelper(
+        downloader, tempStore, conf, controller, bufferPool);
+    List<DatanodeDetails> sourceDNs = reconstructionCommandInfo.getSources()
+        .stream().map(DatanodeDetailsAndReplicaIndex::getDnDetails)
+        .collect(Collectors.toList());
+    List<Integer> sourceIndexes = reconstructionCommandInfo.getSources()
+        .stream().map(DatanodeDetailsAndReplicaIndex::getReplicaIndex)
+        .collect(Collectors.toList());
+    List<Integer> targetIndexes = new ArrayList<>();
+    for (byte i : reconstructionCommandInfo.getMissingContainerIndexes()) {
+      targetIndexes.add((int) i);
+    }
+
+    try {
+      helper.recoverContainerGroup(reconstructionCommandInfo.getContainerID(),
+          sourceDNs, reconstructionCommandInfo.getTargetDatanodes(),
+          sourceIndexes, targetIndexes,
+          reconstructionCommandInfo.getEcReplicationConfig(),
+          reconstructionCommandInfo.getCoordinatorDatanode());
+    } catch (Exception e) {
+      LOG.error("Run {} failed", this, e);
+    } finally {
+      try {
+        downloader.close();
+      } catch (IOException e) {
+        LOG.warn("Failed to close ECContainerDownloader", e);
+      }
+    }
   }
 
   @Override

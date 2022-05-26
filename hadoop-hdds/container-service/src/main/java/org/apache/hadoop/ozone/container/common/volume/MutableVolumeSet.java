@@ -533,4 +533,8 @@ public class MutableVolumeSet implements VolumeSet {
       this.readUnlock();
     }
   }
+
+  public String getDatanodeUuid() {
+    return datanodeUuid;
+  }
 }

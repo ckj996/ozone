@@ -291,6 +291,7 @@ public class TestContainerCommandsEC {
         .setNumDatanodes(NUM_DN)
         .setScmId(SCM_ID)
         .setClusterId(CLUSTER_ID)
+        .setECPipelineMinimum(1)
         .build();
     cluster.waitForClusterToBeReady();
     scm = cluster.getStorageContainerManager();
