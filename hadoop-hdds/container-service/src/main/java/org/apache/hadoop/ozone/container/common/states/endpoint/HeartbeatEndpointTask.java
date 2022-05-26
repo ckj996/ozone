@@ -55,6 +55,7 @@ import org.apache.hadoop.ozone.protocol.commands.CreatePipelineCommand;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.DeleteContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.FinalizeNewLayoutVersionCommand;
+import org.apache.hadoop.ozone.protocol.commands.ReconstructECContainersCommand;
 import org.apache.hadoop.ozone.protocol.commands.RefreshVolumeUsageCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 
@@ -300,6 +301,7 @@ public class HeartbeatEndpointTask
    *
    * @param response - SCMHeartbeat response.
    */
+  @SuppressWarnings("checkstyle:MethodLength")
   private void processResponse(SCMHeartbeatResponseProto response,
       final DatanodeDetailsProto datanodeDetails) {
     Preconditions.checkState(response.getDatanodeUUID()
@@ -444,6 +446,16 @@ public class HeartbeatEndpointTask
           refreshVolumeUsageCommand.setTerm(commandResponseProto.getTerm());
         }
         this.context.addCommand(refreshVolumeUsageCommand);
+        break;
+      case reconstructECContainersCommand:
+        ReconstructECContainersCommand reconstructECContainersCommand =
+            ReconstructECContainersCommand.getFromProtobuf(
+                commandResponseProto.getReconstructECContainersCommandProto());
+        if (commandResponseProto.hasTerm()) {
+          reconstructECContainersCommand.setTerm(
+              commandResponseProto.getTerm());
+        }
+        this.context.addCommand(reconstructECContainersCommand);
         break;
       default:
         throw new IllegalArgumentException("Unknown response : "

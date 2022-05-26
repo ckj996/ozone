@@ -51,6 +51,7 @@ import org.apache.hadoop.hdds.scm.ha.SCMRatisServerImpl;
 import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.WritableECContainerProvider.WritableECContainerProviderConfig;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.proxy.SCMClientConfig;
 import org.apache.hadoop.hdds.scm.proxy.SCMContainerLocationFailoverProxyProvider;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hdds.scm.safemode.HealthyPipelineSafeModeRule;
 import org.apache.hadoop.hdds.scm.server.OzoneStorageContainerManager;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.client.OzoneClient;
@@ -65,6 +67,7 @@ import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.container.common.DatanodeLayoutStorage;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
+import org.apache.hadoop.ozone.container.replication.GrpcReplicationClient;
 import org.apache.hadoop.ozone.container.replication.ReplicationServer.ReplicationConfig;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMStorage;
@@ -329,6 +332,16 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     return OzoneClientFactory.getRpcClient(conf);
   }
 
+  @Override
+  public GrpcReplicationClient getReplicationClient(DatanodeDetails datanode)
+      throws IOException {
+    String workdir = conf.get(OzoneConfigKeys.OZONE_CONTAINER_COPY_WORKDIR,
+        System.getProperty("java.io.tmpdir"));
+    return new GrpcReplicationClient(datanode.getIpAddress(),
+        datanode.getPort(DatanodeDetails.Port.Name.REPLICATION).getValue(),
+        Paths.get(workdir), new SecurityConfig(conf), caClient);
+  }
+
   /**
    * Returns an RPC proxy connected to this cluster's StorageContainerManager
    * for accessing container location information.  Callers take ownership of
@@ -516,7 +529,8 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     stopRecon(reconServer);
   }
 
-  private CertificateClient getCAClient() {
+  @Override
+  public CertificateClient getCAClient() {
     return this.caClient;
   }
 
@@ -685,8 +699,11 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
           streamBufferSizeUnit.get());
       // MiniOzoneCluster should have global pipeline upper limit.
       conf.setInt(ScmConfigKeys.OZONE_SCM_RATIS_PIPELINE_LIMIT,
-          pipelineNumLimit >= DEFAULT_PIPELINE_LIMIT ?
-              pipelineNumLimit : DEFAULT_PIPELINE_LIMIT);
+          pipelineNumLimit);
+      WritableECContainerProviderConfig writableECContainerProviderConfig =
+          conf.getObject(WritableECContainerProviderConfig.class);
+      writableECContainerProviderConfig.setMinimumPipelines(ecPipelineMinimum);
+      conf.setFromObject(writableECContainerProviderConfig);
       conf.setTimeDuration(OMConfigKeys.OZONE_OM_RATIS_MINIMUM_TIMEOUT_KEY,
           DEFAULT_RATIS_RPC_TIMEOUT_SEC, TimeUnit.SECONDS);
       SCMClientConfig scmClientConfig = conf.getObject(SCMClientConfig.class);

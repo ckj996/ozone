@@ -22,13 +22,32 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
+import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkDataMessage;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkInfo;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ConsolidateMessage;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerDataProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.CopyContainerRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.CopyContainerResponseProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.DatanodeBlockID;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ListBlockRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.PushChunkRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.PushChunkResponseProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ReadChunkRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ReadChunkVersion;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ReadContainerRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Type;
 import org.apache.hadoop.hdds.protocol.datanode.proto.IntraDatanodeProtocolServiceGrpc;
 import org.apache.hadoop.hdds.protocol.datanode.proto.IntraDatanodeProtocolServiceGrpc.IntraDatanodeProtocolServiceStub;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
@@ -37,6 +56,8 @@ import org.apache.hadoop.hdds.utils.HAUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.common.ChunkBuffer;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.ratis.thirdparty.io.grpc.ManagedChannel;
 import org.apache.ratis.thirdparty.io.grpc.netty.GrpcSslContexts;
 import org.apache.ratis.thirdparty.io.grpc.netty.NettyChannelBuilder;
@@ -110,6 +131,143 @@ public class GrpcReplicationClient implements AutoCloseable {
     return response;
   }
 
+  public CompletableFuture<List<BlockData>> listBlock(
+      long containerId, String datanodeUUID, int count) {
+    return listBlock(containerId, datanodeUUID, -1, count);
+  }
+
+  public CompletableFuture<List<BlockData>> listBlock(
+      long containerId, String datanodeUUID, long start, int count) {
+
+    ListBlockRequestProto.Builder requestBuilder =
+        ListBlockRequestProto.newBuilder()
+            .setCount(count);
+    if (start >= 0) {
+      requestBuilder.setStartLocalID(start);
+    }
+    ListBlockRequestProto request = requestBuilder.build();
+
+    ContainerCommandRequestProto command =
+        ContainerCommandRequestProto.newBuilder()
+            .setCmdType(Type.ListBlock)
+            .setContainerID(containerId)
+            .setDatanodeUuid(datanodeUUID)
+            .setListBlock(request)
+            .build();
+
+    CompletableFuture<List<ContainerCommandResponseProto>> future =
+        new CompletableFuture<>();
+
+    client.send(command, new ContainerCommandObserver(containerId, future));
+
+    return future.thenApply(responses -> responses.stream()
+        .filter(r -> r.getCmdType() == Type.ListBlock)
+        .flatMap(r -> r.getListBlock().getBlockDataList().stream())
+        .map(b -> {
+          try {
+            return BlockData.getFromProtoBuf(b);
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        })
+        .collect(Collectors.toList()));
+  }
+
+  public CompletableFuture<ContainerDataProto> readContainer(
+      long containerId, String datanodeUUID) {
+
+    ContainerCommandRequestProto command =
+        ContainerCommandRequestProto.newBuilder()
+            .setCmdType(Type.ReadContainer)
+            .setContainerID(containerId)
+            .setDatanodeUuid(datanodeUUID)
+            .setReadContainer(ReadContainerRequestProto.newBuilder().build())
+            .build();
+
+    CompletableFuture<List<ContainerCommandResponseProto>> future =
+        new CompletableFuture<>();
+
+    client.send(command, new ContainerCommandObserver(containerId, future));
+
+    return future.thenApply(responses -> responses.stream()
+        .filter(r -> r.getCmdType() == Type.ReadContainer)
+        .findFirst()
+        .map(r -> r.getReadContainer().getContainerData())
+        .orElse(null));
+  }
+
+  public CompletableFuture<ByteBuffer> readChunk(long containerId,
+      String datanodeUUID, BlockID blockID, ChunkInfo chunkInfo) {
+
+    ReadChunkRequestProto request =
+        ReadChunkRequestProto.newBuilder()
+            .setBlockID(blockID.getDatanodeBlockIDProtobuf())
+            .setChunkData(chunkInfo)
+            .setReadChunkVersion(ReadChunkVersion.V0)
+            .build();
+
+    ContainerCommandRequestProto command =
+        ContainerCommandRequestProto.newBuilder()
+            .setCmdType(Type.ReadChunk)
+            .setContainerID(containerId)
+            .setDatanodeUuid(datanodeUUID)
+            .setReadChunk(request)
+            .build();
+
+    CompletableFuture<List<ContainerCommandResponseProto>> future =
+        new CompletableFuture<>();
+
+    client.send(command, new ContainerCommandObserver(containerId, future));
+
+    return future.thenApply(responses -> responses.stream()
+        .filter(r -> r.getCmdType() == Type.ReadChunk)
+        .findFirst()
+        .map(r -> r.getReadChunk().getData().asReadOnlyByteBuffer())
+        .orElse(null));
+  }
+
+  public CompletableFuture<Long> pushChunk(
+      int replicaIndex, DatanodeBlockID blockID,
+      ChunkInfo chunkInfo, ChunkBuffer chunkData, boolean last) {
+
+    ChunkDataMessage message = ChunkDataMessage.newBuilder()
+        .setReplicaIndex(replicaIndex)
+        .setBlockID(blockID)
+        .setChunkData(chunkInfo)
+        .setData(chunkData.toByteString())
+        .setLast(last)
+        .build();
+
+    PushChunkRequestProto request = PushChunkRequestProto.newBuilder()
+        .setMessage(PushChunkRequestProto.Message.CHUNK_DATA)
+        .setChunkData(message)
+        .build();
+
+    CompletableFuture<Long> future = new CompletableFuture<>();
+
+    client.push(request, new PushChunkObserver(future));
+
+    return future;
+  }
+
+  public CompletableFuture<Long> consolidateContainer(long containerID) {
+
+    ConsolidateMessage message = ConsolidateMessage.newBuilder()
+        .setContainerID(containerID)
+        .build();
+
+    PushChunkRequestProto request = PushChunkRequestProto.newBuilder()
+        .setMessage(PushChunkRequestProto.Message.CONSOLIDATE)
+        .setConsolidate(message)
+        .build();
+
+    CompletableFuture<Long> future = new CompletableFuture<>();
+
+    client.push(request, new PushChunkObserver(future));
+
+    return future;
+  }
+
   private Path getWorkingDirectory() {
     return workingDirectory;
   }
@@ -125,7 +283,7 @@ public class GrpcReplicationClient implements AutoCloseable {
   }
 
   @Override
-  public void close() throws Exception {
+  public void close() {
     shutdown();
   }
 
@@ -214,4 +372,70 @@ public class GrpcReplicationClient implements AutoCloseable {
       }
     }
   }
+
+  /**
+   * gRPC stream observer to CompletableFuture adapter.
+   */
+  public static class ContainerCommandObserver
+      implements StreamObserver<ContainerCommandResponseProto> {
+
+    private final List<ContainerCommandResponseProto> result;
+    private final CompletableFuture<List<ContainerCommandResponseProto>> future;
+    private final long containerId;
+
+    public ContainerCommandObserver(long containerId,
+        CompletableFuture<List<ContainerCommandResponseProto>> future) {
+      this.future = future;
+      this.containerId = containerId;
+      this.result = new ArrayList<>();
+    }
+
+    @Override
+    public void onNext(ContainerCommandResponseProto response) {
+      result.add(response);
+    }
+
+    @Override
+    public void onError(Throwable throwable) {
+      LOG.error("Command to container {} failed", containerId, throwable);
+      future.completeExceptionally(throwable);
+    }
+
+    @Override
+    public void onCompleted() {
+      future.complete(result);
+    }
+
+  }
+
+  /**
+   * gRPC stream observer to CompletableFuture adapter.
+   */
+  public static class PushChunkObserver
+      implements StreamObserver<PushChunkResponseProto> {
+
+    private final CompletableFuture<Long> future;
+    private long count;
+
+    PushChunkObserver(CompletableFuture<Long> future) {
+      this.future = future;
+      this.count = 0;
+    }
+
+    @Override
+    public void onNext(PushChunkResponseProto response) {
+      count++;
+    }
+
+    @Override
+    public void onError(Throwable throwable) {
+      future.completeExceptionally(throwable);
+    }
+
+    @Override
+    public void onCompleted() {
+      future.complete(count);
+    }
+  }
+
 }

@@ -485,6 +485,31 @@ message CopyContainerResponseProto {
   optional int64 checksum = 6;
 }
 
+message  PushChunkRequestProto  {
+  enum Message {
+    CHUNK_DATA = 1;
+    CONSOLIDATE = 2;
+  }
+  required Message message = 1;
+  optional ChunkDataMessage chunkData = 2;
+  optional ConsolidateMessage consolidate = 3;
+}
+
+message  PushChunkResponseProto {
+}
+
+message ChunkDataMessage {
+  required int32 replicaIndex = 1;
+  required DatanodeBlockID blockID = 2;
+  required ChunkInfo chunkData = 3;
+  required bytes data = 4;
+  required bool last = 5;
+}
+
+message ConsolidateMessage {
+  required int64 containerID = 1;
+}
+
 service XceiverClientProtocolService {
   // A client-to-datanode RPC to send container commands
   rpc send(stream ContainerCommandRequestProto) returns
@@ -495,4 +520,8 @@ service XceiverClientProtocolService {
 service IntraDatanodeProtocolService {
   // An intradatanode service to copy the raw container data between nodes
   rpc download (CopyContainerRequestProto) returns (stream CopyContainerResponseProto);
+  // Send read only commands to get status and data from CoordinatorDN to HealthyDN.
+  rpc send(ContainerCommandRequestProto) returns (stream ContainerCommandResponseProto);
+  // Push recovered chunks from CoordinatorDN to TargetDN.
+  rpc push(PushChunkRequestProto) returns (stream PushChunkResponseProto);
 }

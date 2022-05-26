@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolCli
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.container.replication.GrpcReplicationClient;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.recon.ReconServer;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -187,6 +188,20 @@ public interface MiniOzoneCluster {
   OzoneClient getRpcClient() throws IOException;
 
   /**
+   * Creates a {@link GrpcReplicationClient} to access the replication
+   * service of datanode i.
+   *
+   * @param datanode the datanode which the replication client will connect to
+   * @return a {@link GrpcReplicationClient} connected to datanode i,
+   *         should call close() after finish.
+   * @throws IOException
+   */
+  GrpcReplicationClient getReplicationClient(DatanodeDetails datanode)
+      throws IOException;
+
+  CertificateClient getCAClient();
+
+  /**
    * Returns StorageContainerLocationClient to communicate with
    * {@link StorageContainerManager} associated with the MiniOzoneCluster.
    *
@@ -297,6 +312,7 @@ public interface MiniOzoneCluster {
     protected static final int ACTIVE_OMS_NOT_SET = -1;
     protected static final int ACTIVE_SCMS_NOT_SET = -1;
     protected static final int DEFAULT_PIPELINE_LIMIT = 3;
+    protected static final int DEFAULT_EC_PIPELINE_MINIMUM = 3;
     protected static final int DEFAULT_RATIS_RPC_TIMEOUT_SEC = 1;
 
     protected OzoneConfiguration conf;
@@ -340,6 +356,7 @@ public interface MiniOzoneCluster {
     protected boolean  startDataNodes = true;
     protected CertificateClient certClient;
     protected int pipelineNumLimit = DEFAULT_PIPELINE_LIMIT;
+    protected int ecPipelineMinimum = DEFAULT_EC_PIPELINE_MINIMUM;
 
     protected Builder(OzoneConfiguration conf) {
       this.conf = conf;
@@ -462,6 +479,16 @@ public interface MiniOzoneCluster {
      */
     public Builder setTotalPipelineNumLimit(int val) {
       pipelineNumLimit = val;
+      return this;
+    }
+
+    /**
+     * Sets the minimum number of pipelines for each EC replication config.
+     * @param val number of pipelines
+     * @return MiniOzoneCluster.Builder
+     */
+    public Builder setECPipelineMinimum(int val) {
+      ecPipelineMinimum = val;
       return this;
     }
 
