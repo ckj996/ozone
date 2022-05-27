@@ -25,35 +25,32 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto.State;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
-import org.apache.hadoop.hdds.scm.container.replication.LegacyReplicationManager;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager
-    .ReplicationManagerConfiguration;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReplicaProto.State;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.scm.PlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.common.helpers.MoveDataNodePair;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementStatusDefault;
+import org.apache.hadoop.hdds.scm.container.replication.LegacyReplicationManager;
 import org.apache.hadoop.hdds.scm.container.replication.LegacyReplicationManager.MoveResult;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager.ReplicationManagerConfiguration;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
-import org.apache.hadoop.hdds.scm.ha.SCMHAManagerStub;
 import org.apache.hadoop.hdds.scm.ha.SCMContext;
 import org.apache.hadoop.hdds.scm.ha.SCMHAManager;
+import org.apache.hadoop.hdds.scm.ha.SCMHAManagerStub;
 import org.apache.hadoop.hdds.scm.ha.SCMServiceManager;
 import org.apache.hadoop.hdds.scm.metadata.SCMDBDefinition;
 import org.apache.hadoop.hdds.scm.metadata.SCMDBTransactionBufferImpl;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
-import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.apache.hadoop.hdds.utils.db.DBStoreBuilder;
 import org.apache.hadoop.ozone.common.statemachine.InvalidStateTransitionException;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
@@ -85,20 +82,18 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.apache.hadoop.hdds.protocol.MockDatanodeDetails.createDatanodeDetails;
+import static org.apache.hadoop.hdds.protocol.MockDatanodeDetails.randomDatanodeDetails;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalState.DECOMMISSIONED;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalState.DECOMMISSIONING;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalState.IN_MAINTENANCE;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalState.IN_SERVICE;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.HEALTHY;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.STALE;
-import static org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto.State.CLOSED;
+import static org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReplicaProto.State.CLOSED;
 import static org.apache.hadoop.hdds.scm.HddsTestUtils.CONTAINER_NUM_KEYS_DEFAULT;
 import static org.apache.hadoop.hdds.scm.HddsTestUtils.CONTAINER_USED_BYTES_DEFAULT;
 import static org.apache.hadoop.hdds.scm.HddsTestUtils.getContainer;
 import static org.apache.hadoop.hdds.scm.HddsTestUtils.getReplicas;
-import static org.apache.hadoop.hdds.protocol.MockDatanodeDetails.randomDatanodeDetails;
-import static org.mockito.Mockito.when;
 
 /**
  * Test cases to verify the functionality of ReplicationManager.
@@ -141,8 +136,8 @@ public class TestReplicationManager {
     dbStore = DBStoreBuilder.createDBStore(
         conf, new SCMDBDefinition());
     pipelineManager = Mockito.mock(PipelineManager.class);
-    when(pipelineManager.containsPipeline(Mockito.any(PipelineID.class)))
-        .thenReturn(true);
+    Mockito.when(pipelineManager
+            .containsPipeline(Mockito.any(PipelineID.class))).thenReturn(true);
     containerStateManager = ContainerStateManagerImpl.newBuilder()
         .setConfiguration(conf)
         .setPipelineManager(pipelineManager)
@@ -2013,7 +2008,7 @@ public class TestReplicationManager {
     FileUtils.deleteDirectory(testDir);
   }
 
-  private static class DatanodeCommandHandler implements
+  protected static class DatanodeCommandHandler implements
       EventHandler<CommandForDatanode> {
 
     private AtomicInteger invocation = new AtomicInteger(0);
@@ -2031,16 +2026,16 @@ public class TestReplicationManager {
       commands.add(command);
     }
 
-    private int getInvocation() {
+    protected int getInvocation() {
       return invocation.get();
     }
 
-    private int getInvocationCount(SCMCommandProto.Type type) {
+    protected int getInvocationCount(SCMCommandProto.Type type) {
       return commandInvocation.containsKey(type) ?
           commandInvocation.get(type).get() : 0;
     }
 
-    private List<CommandForDatanode> getReceivedCommands() {
+    protected List<CommandForDatanode> getReceivedCommands() {
       return commands;
     }
 

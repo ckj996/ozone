@@ -694,6 +694,40 @@ public final class HddsTestUtils {
         CONTAINER_NUM_KEYS_DEFAULT, sequenceId, originNodeId, datanodeDetails);
   }
 
+  public static ContainerReplica getEcReplicas(
+      final ContainerID containerId,
+      final ContainerReplicaProto.State state,
+      final long sequenceId,
+      final UUID originNodeId,
+      final DatanodeDetails datanodeDetails,
+      final int index) {
+    return getEcReplicas(containerId, state, CONTAINER_USED_BYTES_DEFAULT,
+        CONTAINER_NUM_KEYS_DEFAULT, sequenceId, originNodeId,
+        datanodeDetails, index);
+  }
+
+  @SuppressWarnings("parameternumber")
+  public static ContainerReplica getEcReplicas(
+      final ContainerID containerId,
+      final ContainerReplicaProto.State state,
+      final long usedBytes,
+      final long keyCount,
+      final long sequenceId,
+      final UUID originNodeId,
+      final DatanodeDetails datanodeDetails,
+      final int index) {
+    return ContainerReplica.newBuilder()
+        .setContainerID(containerId)
+        .setContainerState(state)
+        .setDatanodeDetails(datanodeDetails)
+        .setOriginNodeId(originNodeId)
+        .setSequenceId(sequenceId)
+        .setBytesUsed(usedBytes)
+        .setKeyCount(keyCount)
+        .setReplicaIndex(index)
+        .build();
+  }
+
   public static ContainerReplica getReplicas(
       final ContainerID containerId,
       final ContainerReplicaProto.State state,

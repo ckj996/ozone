@@ -33,6 +33,9 @@ import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.container.ContainerReplicaCount;
 import org.apache.hadoop.hdds.scm.container.ReplicationManagerReport;
 import org.apache.hadoop.hdds.scm.container.common.helpers.MoveDataNodePair;
+import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicyFactory;
+import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementMetrics;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.ha.SCMContext;
 import org.apache.hadoop.hdds.scm.ha.SCMHAManager;
 import org.apache.hadoop.hdds.scm.ha.SCMService;
@@ -114,6 +117,8 @@ public class ReplicationManager implements SCMService {
    */
   private LegacyReplicationManager legacyReplicationManager;
 
+  private ECContainerHealthChecker ecContainerHealthChecker;
+
   /**
    * SCMService related variables.
    * After leaving safe mode, replicationMonitor needs to wait for a while
@@ -160,6 +165,22 @@ public class ReplicationManager implements SCMService {
         conf, containerManager, containerPlacement, eventPublisher,
         scmContext, nodeManager, scmhaManager, clock, moveTable);
 
+    PlacementPolicy ecContainerPlacement;
+    try {
+      ecContainerPlacement = ContainerPlacementPolicyFactory.getECPolicy(conf,
+          nodeManager, nodeManager.getClusterNetworkTopologyMap(), true,
+          SCMContainerPlacementMetrics.create());
+    } catch (SCMException e) {
+      throw new RuntimeException("Unable to get the container " +
+          "placement policy", e);
+    }
+
+    //we just set remainingMaintenanceRedundancy to 1 for now, and should
+    //be set in rmconf later.
+    this.ecContainerHealthChecker = new ECContainerHealthChecker(conf,
+        containerManager, eventPublisher, nodeManager, scmContext,
+        rmConf.eventTimeout, ecContainerPlacement, clock, 1);
+
     // register ReplicationManager to SCMServiceManager.
     serviceManager.register(this);
 
@@ -177,6 +198,7 @@ public class ReplicationManager implements SCMService {
       running = true;
       metrics = ReplicationManagerMetrics.create(this);
       legacyReplicationManager.setMetrics(metrics);
+      ecContainerHealthChecker.setMetrics(metrics);
       replicationMonitor = new Thread(this::run);
       replicationMonitor.setName("ReplicationMonitor");
       replicationMonitor.setDaemon(true);
@@ -209,6 +231,7 @@ public class ReplicationManager implements SCMService {
       LOG.info("Stopping Replication Monitor Thread.");
       running = false;
       legacyReplicationManager.clearInflightActions();
+      ecContainerHealthChecker.clearInflightActions();
       metrics.unRegister();
       replicationMonitor.interrupt();
     } else {
@@ -236,6 +259,7 @@ public class ReplicationManager implements SCMService {
       }
       switch (c.getReplicationType()) {
       case EC:
+        ecContainerHealthChecker.processContainer(c, report);
         break;
       default:
         legacyReplicationManager.processContainer(c, report);
@@ -427,6 +451,14 @@ public class ReplicationManager implements SCMService {
     return legacyReplicationManager.getInflightDeletion();
   }
 
+  public Map<ContainerID, List<InflightAction>> getInflightECDeletion() {
+    return ecContainerHealthChecker.getInflightECDeletion();
+  }
+
+  public Map<ContainerID, List<InflightAction>> getInflightEcReconstruct() {
+    return ecContainerHealthChecker.getInflightEcReconstruct();
+  }
+
   public Map<ContainerID,
       CompletableFuture<LegacyReplicationManager.MoveResult>>
       getInflightMove() {
@@ -440,6 +472,11 @@ public class ReplicationManager implements SCMService {
   @VisibleForTesting
   public LegacyReplicationManager getLegacyReplicationManager() {
     return legacyReplicationManager;
+  }
+
+  @VisibleForTesting
+  public ECContainerHealthChecker getEcContainerHealthChecker() {
+    return ecContainerHealthChecker;
   }
 
   public boolean isContainerReplicatingOrDeleting(ContainerID containerID) {
