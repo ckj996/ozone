@@ -105,11 +105,20 @@ public final class ReplicationManagerMetrics implements MetricsSource {
   @Metric("Number of deletion commands sent.")
   private MutableCounterLong numDeletionCmdsSent;
 
+  @Metric("Number of EcReconstruct commands sent.")
+  private MutableCounterLong numEcReconstructCmdsSent;
+
   @Metric("Number of deletion commands completed.")
   private MutableCounterLong numDeletionCmdsCompleted;
 
+  @Metric("Number of EcReconstruct commands completed.")
+  private MutableCounterLong numEcReconstrucCmdsCompleted;
+
   @Metric("Number of deletion commands timeout.")
   private MutableCounterLong numDeletionCmdsTimeout;
+
+  @Metric("Number of EcReconstruct commands timeout.")
+  private MutableCounterLong numEcReconstructCmdsTimeout;
 
   @Metric("Number of replication bytes total.")
   private MutableCounterLong numReplicationBytesTotal;
@@ -122,6 +131,9 @@ public final class ReplicationManagerMetrics implements MetricsSource {
 
   @Metric("Number of deletion bytes completed.")
   private MutableCounterLong numDeletionBytesCompleted;
+
+  @Metric("Number of EcReconstruct bytes completed.")
+  private MutableCounterLong numEcReconstructBytesCompleted;
 
   @Metric("Time elapsed for replication")
   private MutableRate replicationTime;
@@ -206,12 +218,24 @@ public final class ReplicationManagerMetrics implements MetricsSource {
     this.numDeletionCmdsSent.incr();
   }
 
+  public void incrNumEcReconstructCmdsSent() {
+    this.numEcReconstructCmdsSent.incr();
+  }
+
   public void incrNumDeletionCmdsCompleted() {
     this.numDeletionCmdsCompleted.incr();
   }
 
+  public void incrNumEcReconstructCmdsCompleted() {
+    this.numEcReconstrucCmdsCompleted.incr();
+  }
+
   public void incrNumDeletionCmdsTimeout() {
     this.numDeletionCmdsTimeout.incr();
+  }
+
+  public void incrNumEcRecstructCmdsTimeout() {
+    this.numEcReconstructCmdsTimeout.incr();
   }
 
   public void incrNumReplicationBytesTotal(long bytes) {
@@ -228,6 +252,10 @@ public final class ReplicationManagerMetrics implements MetricsSource {
 
   public void incrNumDeletionBytesCompleted(long bytes) {
     this.numDeletionBytesCompleted.incr(bytes);
+  }
+
+  public void incrNumEcRestructBytesCompleted(long bytes) {
+    this.numEcReconstructBytesCompleted.incr(bytes);
   }
 
   public void addReplicationTime(long millis) {
@@ -277,6 +305,10 @@ public final class ReplicationManagerMetrics implements MetricsSource {
     return this.numReplicationCmdsSent.value();
   }
 
+  public long getNumEcReconstrucCmdsSent() {
+    return this.numEcReconstructCmdsSent.value();
+  }
+
   public long getNumReplicationCmdsCompleted() {
     return this.numReplicationCmdsCompleted.value();
   }
@@ -291,6 +323,10 @@ public final class ReplicationManagerMetrics implements MetricsSource {
 
   public long getNumDeletionCmdsCompleted() {
     return this.numDeletionCmdsCompleted.value();
+  }
+
+  public long getNumEcReconstructCmdsCompleted() {
+    return this.numEcReconstrucCmdsCompleted.value();
   }
 
   public long getNumDeletionCmdsTimeout() {

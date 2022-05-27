@@ -2108,7 +2108,10 @@ public class TestReplicationManager {
     FileUtils.deleteDirectory(testDir);
   }
 
-  private static class DatanodeCommandHandler implements
+  /**
+   * DatanodeCommandHandler for test.
+   */
+  public static class DatanodeCommandHandler implements
       EventHandler<CommandForDatanode> {
 
     private AtomicInteger invocation = new AtomicInteger(0);
@@ -2126,16 +2129,16 @@ public class TestReplicationManager {
       commands.add(command);
     }
 
-    private int getInvocation() {
+    public int getInvocation() {
       return invocation.get();
     }
 
-    private int getInvocationCount(SCMCommandProto.Type type) {
+    public int getInvocationCount(SCMCommandProto.Type type) {
       return commandInvocation.containsKey(type) ?
           commandInvocation.get(type).get() : 0;
     }
 
-    private List<CommandForDatanode> getReceivedCommands() {
+    public List<CommandForDatanode> getReceivedCommands() {
       return commands;
     }
 
