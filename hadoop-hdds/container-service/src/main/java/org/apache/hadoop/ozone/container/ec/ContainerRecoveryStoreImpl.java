@@ -102,8 +102,8 @@ public class ContainerRecoveryStoreImpl implements ContainerRecoveryStore {
   public void writeChunk(long containerID, int replicaIndex,
       BlockID blockID, ChunkInfo chunkInfo, ChunkBuffer data, boolean last)
       throws IOException {
-    KeyValueContainer container = metaCache.getOrCreateContainer(containerID,
-        "", datanodeUUID, replicaIndex);
+    KeyValueContainer container =
+        getOrCreateContainer(containerID, replicaIndex);
 
     try {
       // choose a volume for new container
@@ -168,6 +168,20 @@ public class ContainerRecoveryStoreImpl implements ContainerRecoveryStore {
     }
     metaCache.dropContainerAll(containerID);
     removeRecoveredFiles(container);
+  }
+
+  private KeyValueContainer getOrCreateContainer(long containerID,
+      int replicaIndex) {
+    KeyValueContainer container = metaCache.getOrCreateContainer(containerID,
+        datanodeUUID, replicaIndex);
+    // This happens on a TargetDN due to CoordinatorDN recover failure without
+    // possible notify to TargetDNs to clean up.
+    if (container.getContainerData().getReplicaIndex() != replicaIndex) {
+      cleanupContainerAll(containerID);
+      container = metaCache.getOrCreateContainer(containerID, datanodeUUID,
+          replicaIndex);
+    }
+    return container;
   }
 
   private void chooseVolumeForContainer(KeyValueContainer container)

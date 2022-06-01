@@ -131,12 +131,12 @@ public final class ContainerRecoveryMetaCache {
   }
 
   KeyValueContainer getOrCreateContainer(long containerID,
-      String pipelineID, String datanodeID, int replicaIndex) {
+      String datanodeID, int replicaIndex) {
     return containerMap.compute(containerID, (id, container) -> {
       if (container == null) {
         KeyValueContainerData containerData =
             new KeyValueContainerData(containerID, layoutVersion,
-                maxContainerSize, pipelineID, datanodeID);
+                maxContainerSize, "", datanodeID);
         containerData.setSchemaVersion(schemaVersion);
         containerData.setState(state);
         containerData.setReplicaIndex(replicaIndex);
