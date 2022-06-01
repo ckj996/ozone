@@ -114,7 +114,6 @@ public final class ContainerRecoveryMetaCache {
         return data;
       });
     } catch (ExecutionException e) {
-      dropContainerAll(containerID);
       throw new IOException("Failed to add chunk " + chunkInfo.getChunkName() +
           " to block " + blockID, e);
     }
@@ -153,6 +152,7 @@ public final class ContainerRecoveryMetaCache {
 
   void dropContainerAll(long containerID) {
     containerBlockDataCache.invalidate(containerID);
+    containerMap.remove(containerID);
   }
 
   /**
