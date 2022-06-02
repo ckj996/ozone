@@ -229,16 +229,26 @@ public class ECContainerDownloaderImpl implements ECContainerDownloader {
   @Override
   public ByteBuffer[] readStripe(BlockData[] blockGroup, int stripeIndex) {
 
-    ByteBuffer[] stripe = new ByteBuffer[sourceDNs.size()];
-
+    // read DNs in parallel
+    CompletableFuture<ByteBuffer>[] futures =
+        new CompletableFuture[sourceDNs.size()];
     for (int i = 0; i < sourceDNs.size(); i++) {
       if (clients.get(i) == null || blockGroup[i] == null ||
           stripeIndex > blockGroup[i].getChunks().size()) {
         continue;
       }
+      futures[i] = readChunk(clients.get(i), sourceDNs.get(i), blockGroup[i],
+          blockGroup[i].getChunks().get(stripeIndex - 1));
+    }
+
+    // join at stripe level
+    ByteBuffer[] stripe = new ByteBuffer[sourceDNs.size()];
+    for (int i = 0; i < sourceDNs.size(); i++) {
+      if (futures[i] == null) {
+        continue;
+      }
       try {
-        stripe[i] = readChunk(clients.get(i), sourceDNs.get(i), blockGroup[i],
-            blockGroup[i].getChunks().get(stripeIndex - 1)).get();
+        stripe[i] = futures[i].get();
       } catch (ExecutionException e) {
         LOG.warn("Failed to read chunk {} from DN {} replicaIndex {}: {}",
             stripeIndex, sourceDNs.get(i).getHostName(), i + 1, e);
@@ -250,27 +260,17 @@ public class ECContainerDownloaderImpl implements ECContainerDownloader {
   }
 
   @Override
-  public void writeChunk(long containerID, int replicaIndex,
-      BlockID blockID, ChunkInfo chunkInfo, ChunkBuffer data, boolean last)
-      throws IOException {
+  public CompletableFuture<Long> writeChunkAsync(long containerID,
+      int replicaIndex, BlockID blockID, ChunkInfo chunkInfo,
+      ChunkBuffer data, boolean last) throws IOException {
 
     final GrpcReplicationClient client = pushClients.get(replicaIndex - 1);
     if (client == null) {
       throw new IOException("TargetDN " + replicaIndex + " not connected");
     }
-    CompletableFuture<Long> future = client.pushChunk(replicaIndex,
-        blockID.getDatanodeBlockIDProtobuf(), chunkInfo.getProtoBufMessage(),
-        data, last);
 
-    try {
-      future.get();
-    } catch (InterruptedException e) {
-      LOG.warn("interrupted");
-      Thread.currentThread().interrupt();
-    } catch (ExecutionException e) {
-      LOG.error("WriteChunk failed", e);
-      throw new IOException(e);
-    }
+    return client.pushChunk(replicaIndex, blockID.getDatanodeBlockIDProtobuf(),
+        chunkInfo.getProtoBufMessage(), data, last);
   }
 
   @Override

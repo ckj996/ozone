@@ -65,6 +65,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -506,10 +507,10 @@ public class TestECContainerRecoverHelper {
     }
 
     @Override
-    public void writeChunk(long containerID, int replicaIndex,
-        BlockID blockID, ChunkInfo chunkInfo,
+    public CompletableFuture<Long> writeChunkAsync(long containerID,
+        int replicaIndex, BlockID blockID, ChunkInfo chunkInfo,
         ChunkBuffer data, boolean last) throws IOException {
-      // nothing
+      return CompletableFuture.completedFuture(0L);
     }
 
     @Override
