@@ -203,6 +203,7 @@ public class ECContainerRecoverHelper {
     int stripeIndex = stripeContext.getChunkIndexInBlock();
     long blockGroupRemaining = stripeContext.getBlockGroupRemaining();
     long stripeLen = stripeContext.getStripeLen();
+    boolean isLastStripe = blockGroupRemaining == stripeLen;
 
     // prepare chunkInfos for both read available chunks
     // and write recovered chunks
@@ -211,7 +212,19 @@ public class ECContainerRecoverHelper {
 
     if (isGoodPartialStripe(stripeChunkInfos,
         containerContext.getTargetIndexNodeMap())) {
-      LOG.debug("Stripe {} is a good partial Stripe, skip recover",
+      LOG.debug("Stripe {} is a good partial stripe, skip recover",
+          stripeIndex);
+      return;
+    }
+
+    // This check is not absolutely accurate, some failed stripes
+    // may be recovered as well due to that those failed chunks are
+    // included in the missing ones, so not detectable.
+    // But it doesn't harm the data consistency from the client view,
+    // just a bit wast of storage space.
+    if (isLastStripe && isFailedStripe(stripeChunkInfos,
+        blockContext.getBlockGroup(), stripeIndex)) {
+      LOG.debug("Stripe {} is a failed last stripe, skip recover",
           stripeIndex);
       return;
     }
@@ -237,7 +250,7 @@ public class ECContainerRecoverHelper {
       // write recovered chunks to temp store
       writeRecoveredChunks(containerContext, blockContext,
           stripeRecoveredChunks, stripeChunkInfos,
-          blockGroupRemaining == stripeLen);
+          isLastStripe);
     } catch (IOException e) {
       LOG.error("Failed to recover stripe {} for block {}",
           stripeIndex, localID);
@@ -319,9 +332,11 @@ public class ECContainerRecoverHelper {
         }
       }
 
+      // A bad block with single failed stripe, no need to recover it.
       if (blockGroupLen == Long.MAX_VALUE) {
-        throw new IOException("No valid blockGroupLen found for block "
-            + localID);
+        LOG.warn("No valid blockGroupLen found for block {}, skip it",
+            localID);
+        continue;
       }
 
       LOG.debug("Calculated effective blockGroupLen {} for block {}",
@@ -383,6 +398,36 @@ public class ECContainerRecoverHelper {
       Map<Integer, DatanodeDetails> targetIndexNodeMap) {
     return targetIndexNodeMap.keySet().stream()
         .allMatch(index -> stripeChunkInfos[index - 1] == null);
+  }
+
+  /**
+   * If the retrieved stripe chunk list doesn't match that
+   * calculated with the effective blockGroupLen, then
+   * the stripe is a failed stripe.
+   * @param stripeChunkInfos
+   * @param blockGroup
+   * @param stripeIndex
+   * @return
+   */
+  boolean isFailedStripe(ChunkInfo[] stripeChunkInfos,
+      BlockData[] blockGroup, int stripeIndex) {
+    int replicaCount = stripeChunkInfos.length;
+
+    for (int r = 0; r < replicaCount; r++) {
+      // skip expected empty chunk for partial stripe
+      if (stripeChunkInfos[r] == null) {
+        continue;
+      }
+      // skip missing indexes
+      if (blockGroup[r] == null) {
+        continue;
+      }
+
+      if (stripeIndex - 1 >= blockGroup[r].getChunks().size()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
