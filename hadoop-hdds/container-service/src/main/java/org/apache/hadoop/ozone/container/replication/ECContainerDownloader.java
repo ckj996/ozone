@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.SortedMap;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.client.ECReplicationConfig;
@@ -50,7 +51,7 @@ public interface ECContainerDownloader extends Closeable {
 
   ByteBuffer[] readStripe(BlockData[] blockGroup, int stripeIndex);
 
-  void writeChunk(long containerID, int replicaIndex,
+  CompletableFuture<Long> writeChunkAsync(long containerID, int replicaIndex,
       BlockID blockID, ChunkInfo chunkInfo, ChunkBuffer data,
       boolean last) throws IOException;
 

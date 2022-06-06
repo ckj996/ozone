@@ -51,6 +51,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static org.apache.hadoop.ozone.container.ec.ContainerRecoveryStoreImpl.getChunkName;
 
@@ -539,6 +541,8 @@ public class ECContainerRecoverHelper {
         blockContext.getLocalID());
     KeyValueContainerData localReplica = containerContext.getLocalReplica();
 
+    List<CompletableFuture<Long>> futures = new ArrayList<>();
+
     for (Map.Entry<Integer, ByteBuffer> entry : recoveredChunks.entrySet()) {
       int replicaIndex = entry.getKey();
       ChunkBuffer data = ChunkBuffer.wrap(recoveredChunks.get(replicaIndex));
@@ -554,9 +558,21 @@ public class ECContainerRecoverHelper {
               localReplica.getReplicaIndex(),
               blockID, chunkInfos[replicaIndex - 1], data, last);
         } else {
-          downloader.writeChunk(containerContext.getContainerID(),
-              replicaIndex, blockID, chunkInfos[replicaIndex - 1], data, last);
+          futures.add(downloader.writeChunkAsync(
+              containerContext.getContainerID(), replicaIndex,
+              blockID, chunkInfos[replicaIndex - 1], data, last));
         }
+      }
+    }
+    for (CompletableFuture<Long> future : futures) {
+      try {
+        future.get();
+      } catch (InterruptedException e) {
+        LOG.warn("Interrupted while waiting for WriteChunkAsync");
+        Thread.currentThread().interrupt();
+      } catch (ExecutionException e) {
+        LOG.error("WriteChunkAsync failed", e);
+        throw new IOException(e);
       }
     }
   }
