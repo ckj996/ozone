@@ -114,7 +114,6 @@ public final class ContainerRecoveryMetaCache {
         return data;
       });
     } catch (ExecutionException e) {
-      dropContainerAll(containerID);
       throw new IOException("Failed to add chunk " + chunkInfo.getChunkName() +
           " to block " + blockID, e);
     }
@@ -132,12 +131,12 @@ public final class ContainerRecoveryMetaCache {
   }
 
   KeyValueContainer getOrCreateContainer(long containerID,
-      String pipelineID, String datanodeID, int replicaIndex) {
+      String datanodeID, int replicaIndex) {
     return containerMap.compute(containerID, (id, container) -> {
       if (container == null) {
         KeyValueContainerData containerData =
             new KeyValueContainerData(containerID, layoutVersion,
-                maxContainerSize, pipelineID, datanodeID);
+                maxContainerSize, "", datanodeID);
         containerData.setSchemaVersion(schemaVersion);
         containerData.setState(state);
         containerData.setReplicaIndex(replicaIndex);
@@ -153,6 +152,7 @@ public final class ContainerRecoveryMetaCache {
 
   void dropContainerAll(long containerID) {
     containerBlockDataCache.invalidate(containerID);
+    containerMap.remove(containerID);
   }
 
   /**
