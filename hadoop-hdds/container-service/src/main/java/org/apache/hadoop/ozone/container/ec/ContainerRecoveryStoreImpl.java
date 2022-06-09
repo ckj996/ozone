@@ -112,7 +112,7 @@ public class ContainerRecoveryStoreImpl implements ContainerRecoveryStore {
       // write chunk data to disk
       writeToChunkFile(container, blockID, chunkInfo, data, last);
 
-      metaCache.addChunkToBlock(blockID, chunkInfo);
+      metaCache.addChunkToBlock(blockID, chunkInfo, last);
     } catch (DiskOutOfSpaceException e) {
       LOG.error("No volume with enough space to recover container {}",
           containerID);

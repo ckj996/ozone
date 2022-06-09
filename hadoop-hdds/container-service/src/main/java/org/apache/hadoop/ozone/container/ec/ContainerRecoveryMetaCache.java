@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.container.ec;
 
+import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
@@ -46,6 +47,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.apache.hadoop.ozone.container.ec.ECContainerRecoverHelper.BLOCK_GROUP_LEN_KEY;
 
 /**
  * A cache for chunk-level & block-level metadata,
@@ -98,7 +100,7 @@ public final class ContainerRecoveryMetaCache {
         .build();
   }
 
-  void addChunkToBlock(BlockID blockID, ChunkInfo chunkInfo)
+  void addChunkToBlock(BlockID blockID, ChunkInfo chunkInfo, boolean last)
       throws IOException {
     long containerID = blockID.getContainerID();
 
@@ -109,6 +111,9 @@ public final class ContainerRecoveryMetaCache {
       blockDataMap.compute(blockID, (blk, data) -> {
         if (data == null) {
           data = new BlockData(blockID);
+        }
+        if (last) {
+          setBlockGroupLenMetadata(data, chunkInfo);
         }
         data.addChunk(chunkInfo.getProtoBufMessage());
         return data;
@@ -153,6 +158,21 @@ public final class ContainerRecoveryMetaCache {
   void dropContainerAll(long containerID) {
     containerBlockDataCache.invalidate(containerID);
     containerMap.remove(containerID);
+  }
+
+  private void setBlockGroupLenMetadata(BlockData blockData,
+      ChunkInfo chunkInfo) {
+    Preconditions.checkNotNull(chunkInfo.getMetadata()
+        .get(BLOCK_GROUP_LEN_KEY));
+
+    try {
+      blockData.addMetadata(BLOCK_GROUP_LEN_KEY,
+          chunkInfo.getMetadata().get(BLOCK_GROUP_LEN_KEY));
+      chunkInfo.getMetadata().remove(BLOCK_GROUP_LEN_KEY);
+    } catch (IOException e) {
+      LOG.warn("Duplicate blockGroupLen set for block {}",
+          blockData.getBlockID(), e);
+    }
   }
 
   /**

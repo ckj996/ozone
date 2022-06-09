@@ -74,6 +74,7 @@ import static org.apache.hadoop.ozone.container.ec.ContainerRecoveryStoreImpl.ge
 import static org.apache.hadoop.ozone.container.ec.ECContainerRecoverHelper.BLOCK_GROUP_LEN_KEY;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -407,6 +408,9 @@ public class TestECContainerRecoverHelper {
               decodedeData.toByteString().toByteArray());
           chunkIndex++;
         }
+
+        // check blockGroupLen is also recovered
+        assertNotNull(blockData.getMetadata().get(BLOCK_GROUP_LEN_KEY));
       }
 
       return true;

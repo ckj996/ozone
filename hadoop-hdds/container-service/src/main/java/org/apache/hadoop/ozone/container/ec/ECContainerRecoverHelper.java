@@ -249,8 +249,7 @@ public class ECContainerRecoverHelper {
 
       // write recovered chunks to temp store
       writeRecoveredChunks(containerContext, blockContext,
-          stripeRecoveredChunks, stripeChunkInfos,
-          isLastStripe);
+          stripeRecoveredChunks, stripeChunkInfos);
     } catch (IOException e) {
       LOG.error("Failed to recover stripe {} for block {}",
           stripeIndex, localID);
@@ -343,7 +342,8 @@ public class ECContainerRecoverHelper {
           blockGroupLen, localID);
 
       blockRecoveryContextMap.put(localID, new BlockRecoveryContext(localID,
-          blockGroupLen, checksum, blockReplicas));
+          blockGroupLen, checksum, blockReplicas,
+          containerContext.getRepConfig()));
     }
     return blockRecoveryContextMap;
   }
@@ -573,13 +573,12 @@ public class ECContainerRecoverHelper {
    * @param blockContext
    * @param recoveredChunks
    * @param chunkInfos
-   * @param last
    * @throws IOException
    */
   void writeRecoveredChunks(ContainerRecoveryContext containerContext,
       BlockRecoveryContext blockContext,
       Map<Integer, ByteBuffer> recoveredChunks,
-      ChunkInfo[] chunkInfos, boolean last)
+      ChunkInfo[] chunkInfos)
       throws IOException {
 
     BlockID blockID = new BlockID(containerContext.getContainerID(),
@@ -593,9 +592,18 @@ public class ECContainerRecoverHelper {
       ChunkBuffer data = ChunkBuffer.wrap(recoveredChunks.get(replicaIndex));
 
       if (chunkInfos[replicaIndex - 1] != null) {
+        boolean last = isLastChunkInBlockReplica(replicaIndex, chunkInfos,
+            blockContext.getBlockReplicaSizes());
+
         // compute checksums for each chunk before write or transfer
         computeChecksumForChunk(chunkInfos[replicaIndex - 1],
             blockContext.getChecksum(), data);
+
+        // set the blockGroupLen for block at the last writeChunk
+        if (last) {
+          addBlockGroupLenToMetadata(chunkInfos[replicaIndex - 1],
+              blockContext.getBlockGroupLen());
+        }
 
         // write local chunks to disk
         if (replicaIndex == localReplica.getReplicaIndex()) {
@@ -644,6 +652,29 @@ public class ECContainerRecoverHelper {
       LOG.error("Failed to checksum chunk {}", chunkInfo.getChunkName());
       throw e;
     }
+  }
+
+  void addBlockGroupLenToMetadata(ChunkInfo chunkInfo, long blockGroupLen) {
+    try {
+      chunkInfo.addMetadata(BLOCK_GROUP_LEN_KEY,
+          Long.toString(blockGroupLen));
+    } catch (IOException e) {
+      LOG.warn("Duplicate blockGroupLen set {}", blockGroupLen, e);
+    }
+  }
+
+  /**
+   * Check whether this chunk is the last chunk in this block replica.
+   * @param replicaIndex
+   * @param chunkInfos
+   * @param blockReplicaSizes
+   * @return
+   */
+  boolean isLastChunkInBlockReplica(int replicaIndex, ChunkInfo[] chunkInfos,
+      long[] blockReplicaSizes) {
+    return chunkInfos[replicaIndex - 1].getOffset() +
+        chunkInfos[replicaIndex - 1].getLen()
+        == blockReplicaSizes[replicaIndex - 1];
   }
 
   /**
@@ -724,13 +755,19 @@ public class ECContainerRecoverHelper {
     private final long blockGroupLen;
     private final Checksum checksum;
     private BlockData[] blockGroup;
+    private ECReplicationConfig repConfig;
+    private long[] blockReplicaSizes;
 
     BlockRecoveryContext(Long localID, long blockGroupLen,
-        Checksum checksum, BlockData[] blockGroup) {
+        Checksum checksum, BlockData[] blockGroup,
+        ECReplicationConfig repConfig) {
       this.localID = localID;
       this.blockGroupLen = blockGroupLen;
       this.checksum = checksum;
       this.blockGroup = blockGroup;
+      this.repConfig = repConfig;
+      this.blockReplicaSizes = new long[blockGroup.length];
+      calcBlockReplicaSizes();
     }
 
     Long getLocalID() {
@@ -747,6 +784,29 @@ public class ECContainerRecoverHelper {
 
     BlockData[] getBlockGroup() {
       return blockGroup;
+    }
+
+    long[] getBlockReplicaSizes() {
+      return blockReplicaSizes;
+    }
+
+    void calcBlockReplicaSizes() {
+      long chunkSize = repConfig.getEcChunkSize();
+      long stripeLen = chunkSize * repConfig.getData();
+      long fullStripeCount = blockGroupLen / stripeLen;
+      long lastStripeLen = blockGroupLen - fullStripeCount * stripeLen;
+
+      for (int r = 0; r < repConfig.getData(); r++) {
+        blockReplicaSizes[r] = fullStripeCount * chunkSize;
+        if (lastStripeLen > 0) {
+          blockReplicaSizes[r] += Math.min(lastStripeLen, chunkSize);
+          lastStripeLen -= chunkSize;
+        }
+      }
+      for (int r = repConfig.getData();
+           r < repConfig.getRequiredNodes(); r++) {
+        blockReplicaSizes[r] = blockReplicaSizes[0];
+      }
     }
   }
 

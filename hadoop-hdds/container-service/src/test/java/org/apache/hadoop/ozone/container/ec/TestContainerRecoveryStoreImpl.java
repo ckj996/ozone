@@ -54,6 +54,7 @@ import static org.apache.hadoop.ozone.container.common.impl.ContainerLayoutVersi
 import static org.apache.hadoop.ozone.container.ec.ContainerRecoveryStoreImpl.CHUNK_DIR;
 import static org.apache.hadoop.ozone.container.ec.ContainerRecoveryStoreImpl.RECOVER_DIR;
 import static org.apache.hadoop.ozone.container.ec.ContainerRecoveryStoreImpl.getChunkName;
+import static org.apache.hadoop.ozone.container.ec.ECContainerRecoverHelper.BLOCK_GROUP_LEN_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -274,6 +275,10 @@ public class TestContainerRecoveryStoreImpl {
       for (int c = 0; c < NUM_CHUNKS_PER_BLOCK; c++) {
         ChunkInfo chunkInfo = new ChunkInfo(
             getChunkName(blockID, c), offset, CHUNK_SIZE);
+        if (c == NUM_CHUNKS_PER_BLOCK - 1) {
+          chunkInfo.addMetadata(BLOCK_GROUP_LEN_KEY,
+              Long.toString(CHUNK_SIZE * NUM_CHUNKS_PER_BLOCK));
+        }
         ChunkBuffer data = ChunkBuffer.wrap(ByteBuffer.wrap(CHUNK_DATA));
 
         store.writeChunk(containerID, replicaIndex,

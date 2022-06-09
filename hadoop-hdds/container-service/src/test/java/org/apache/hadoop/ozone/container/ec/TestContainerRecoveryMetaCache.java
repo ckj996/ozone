@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.apache.hadoop.ozone.container.ec.ContainerRecoveryStoreImpl.getChunkName;
+import static org.apache.hadoop.ozone.container.ec.ECContainerRecoverHelper.BLOCK_GROUP_LEN_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -69,9 +70,17 @@ public class TestContainerRecoveryMetaCache {
             for (int j = 0; j < 5; j++) {
               ChunkInfo chunk = new ChunkInfo(
                   getChunkName(block, j), offset, len);
+              if (j == 4) {
+                try {
+                  chunk.addMetadata(BLOCK_GROUP_LEN_KEY,
+                      Long.toString(5 * 1024L));
+                } catch (IOException e) {
+                  fail("Duplicate add blockGroupLen metadata");
+                }
+              }
               offset += len;
               try {
-                metaCache.addChunkToBlock(block, chunk);
+                metaCache.addChunkToBlock(block, chunk, j == 4);
               } catch (IOException e) {
                 fail("IOException when addChunkToBlock" + e);
               }
@@ -95,6 +104,8 @@ public class TestContainerRecoveryMetaCache {
         BlockData blockData = iter.next();
         assertEquals(5, blockData.getChunks().size());
         blockCount++;
+        assertEquals(5 * 1024L,
+            Long.parseLong(blockData.getMetadata().get(BLOCK_GROUP_LEN_KEY)));
       }
       assertEquals(5, blockCount);
     }
@@ -136,7 +147,7 @@ public class TestContainerRecoveryMetaCache {
             getChunkName(block, j), offset, len);
         offset += len;
         try {
-          metaCache.addChunkToBlock(block, chunk);
+          metaCache.addChunkToBlock(block, chunk, false);
         } catch (IOException e) {
           fail("IOException when addChunkToBlock" + e);
         }
