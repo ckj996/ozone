@@ -427,10 +427,10 @@ public class TestECBlockInputStream {
           ecb.ecPipelineRefreshFunction(3, refreshFunction).apply(blockID);
       // Check the pipeline is built with the correct Datanode
       // with right replicaIndex.
-      Assertions.assertEquals(HddsProtos.ReplicationType.STAND_ALONE,
+      Assert.assertEquals(HddsProtos.ReplicationType.STAND_ALONE,
           pipeline.getReplicationConfig().getReplicationType());
-      Assertions.assertEquals(1, pipeline.getNodes().size());
-      Assertions.assertEquals(3, dnMap.get(pipeline.getNodes().get(0)));
+      Assert.assertEquals(1, pipeline.getNodes().size());
+      Assert.assertEquals(3, dnMap.get(pipeline.getNodes().get(0)).intValue());
     }
   }
 
