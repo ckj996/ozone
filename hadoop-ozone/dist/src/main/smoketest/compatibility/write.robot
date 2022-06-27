@@ -28,6 +28,9 @@ ${SUFFIX}    ${EMPTY}
 Key Can Be Written
     Create Key    /vol1/bucket1/key-${SUFFIX}    ${TESTFILE}
 
+Key Can Be Written By Streaming
+    Create Key By Streaming     /vol1/bucket1/skey-${SUFFIX}    ${TESTFILE}
+
 Dir Can Be Created
     Execute    ozone fs -mkdir o3fs://bucket1.vol1/dir-${SUFFIX}
 

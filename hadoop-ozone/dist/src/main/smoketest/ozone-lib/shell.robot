@@ -62,6 +62,12 @@ Create Key
                    Should not contain  ${output}       Failed
     Log            Uploaded ${file} to ${key}
 
+Create Key By Streaming
+    [arguments]    ${key}    ${file}
+    ${output} =    Execute          ozone sh key put --stream ${key} ${file}
+                   Should not contain  ${output}       Failed
+    Log            Uploaded ${file} to ${key} by streaming
+
 Verify Bucket Empty Replication Config
     [arguments]    ${bucket}
     ${result} =    Execute                      ozone sh bucket info ${bucket} | jq -r '.replicationConfig'
