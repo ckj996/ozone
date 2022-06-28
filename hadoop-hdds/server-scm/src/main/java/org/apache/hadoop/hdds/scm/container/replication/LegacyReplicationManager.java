@@ -404,6 +404,7 @@ public class LegacyReplicationManager {
         final Set<ContainerReplica> replicas = containerManager
             .getContainerReplicas(id);
         final LifeCycleState state = container.getState();
+        report.increment(state);
 
         /*
          * We don't take any action if the container is in OPEN state and
