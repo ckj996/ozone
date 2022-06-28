@@ -53,7 +53,6 @@ import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.Reco
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.RefreshVolumeUsageCommandHandler;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.ReplicateContainerCommandHandler;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.SetNodeOperationalStateCommandHandler;
-import org.apache.hadoop.ozone.container.ec.reconstruction.ECReconstructionCoordinator;
 import org.apache.hadoop.ozone.container.ec.reconstruction.ECReconstructionSupervisor;
 import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
@@ -182,12 +181,9 @@ public class DatanodeStateMachine implements Closeable {
     replicationSupervisorMetrics =
         ReplicationSupervisorMetrics.create(supervisor);
 
-    ECReconstructionCoordinator ecReconstructionCoordinator =
-        new ECReconstructionCoordinator(conf, certClient);
     ecReconstructionSupervisor =
         new ECReconstructionSupervisor(container.getContainerSet(), context,
-            replicationConfig.getReplicationMaxStreams(),
-            ecReconstructionCoordinator);
+            replicationConfig.getReplicationMaxStreams());
 
 
     // When we add new handlers just adding a new handler here should do the
@@ -391,10 +387,6 @@ public class DatanodeStateMachine implements Closeable {
       LOG.error("Error attempting to shutdown.", e);
       executorService.shutdownNow();
       Thread.currentThread().interrupt();
-    }
-
-    if (ecReconstructionSupervisor != null) {
-      ecReconstructionSupervisor.close();
     }
 
     if (connectionManager != null) {
