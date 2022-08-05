@@ -25,7 +25,6 @@ import java.util.LinkedList;
 import java.util.Objects;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -138,7 +137,7 @@ public class BlockDeletingService extends BackgroundService {
 
   @Override
   public BackgroundTaskQueue getTasks() {
-    BackgroundTaskQueue queue = new BackgroundTaskQueue();
+    BackgroundTaskQueue taskQueue = new BackgroundTaskQueue();
     List<ContainerBlockInfo> containers = Lists.newArrayList();
     try {
       // We at most list a number of containers a time,
@@ -149,13 +148,13 @@ public class BlockDeletingService extends BackgroundService {
       containers = chooseContainerForBlockDeletion(blockLimitPerInterval,
           containerDeletionPolicy);
 
-      BlockDeletingTask containerBlockInfos = null;
+      BlockDeletingTask blockDeletingTask = null;
       long totalBlocks = 0;
       for (ContainerBlockInfo containerBlockInfo : containers) {
-        containerBlockInfos =
+        blockDeletingTask =
             new BlockDeletingTask(containerBlockInfo.containerData,
                 TASK_PRIORITY_DEFAULT, containerBlockInfo.numBlocksToDelete);
-        queue.add(containerBlockInfos);
+        taskQueue.add(blockDeletingTask);
         totalBlocks += containerBlockInfo.numBlocksToDelete;
       }
       if (containers.size() > 0) {
@@ -168,84 +167,77 @@ public class BlockDeletingService extends BackgroundService {
           + "Retry in next interval. ", e);
     } catch (Exception e) {
       // In case listContainer call throws any uncaught RuntimeException.
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Unexpected error occurs during deleting blocks.", e);
-      }
+      LOG.warn("Unexpected error occurs during deleting blocks.", e);
     }
-    return queue;
+    return taskQueue;
   }
 
   public List<ContainerBlockInfo> chooseContainerForBlockDeletion(
       int blockLimit, ContainerDeletionChoosingPolicy deletionPolicy)
       throws StorageContainerException {
-    Map<Long, ContainerData> containerDataMap =
-        ozoneContainer.getContainerSet().getContainerMap().entrySet().stream()
-            .filter(e -> ((KeyValueContainerData) e.getValue()
-                .getContainerData()).getNumPendingDeletionBlocks() > 0)
-            .filter(e -> isDeletionAllowed(e.getValue().getContainerData(),
-                deletionPolicy)).collect(Collectors
-            .toMap(Map.Entry::getKey, e -> e.getValue().getContainerData()));
+    List<ContainerData> candidateContainers =
+        ozoneContainer.getContainerSet().getContainerMap().values().stream()
+            .map(Container::getContainerData)
+            .filter(containerData -> deletionPolicy
+                .isValidContainerType(containerData.getContainerType()))
+            .filter(ContainerData::isClosed)
+            .filter(containerData -> ((KeyValueContainerData) containerData)
+                .getNumPendingDeletionBlocks() > 0)
+            .filter(this::isDeletionAllowed)
+            .collect(Collectors.toList());
     return deletionPolicy
-        .chooseContainerForBlockDeletion(blockLimit, containerDataMap);
+        .chooseContainerForBlockDeletion(blockLimit, candidateContainers);
   }
 
-  private boolean isDeletionAllowed(ContainerData containerData,
-      ContainerDeletionChoosingPolicy deletionPolicy) {
-    if (!deletionPolicy
-        .isValidContainerType(containerData.getContainerType())) {
-      return false;
-    } else if (!containerData.isClosed()) {
-      return false;
-    } else {
-      if (ozoneContainer.getWriteChannel() instanceof XceiverServerRatis) {
-        XceiverServerRatis ratisServer =
-            (XceiverServerRatis) ozoneContainer.getWriteChannel();
-        final String originPipelineId = containerData.getOriginPipelineId();
-        if (originPipelineId == null || originPipelineId.isEmpty()) {
-          // In case the pipelineID is empty, just mark it for deletion.
-          // TODO: currently EC container goes through this path.
+  private boolean isDeletionAllowed(ContainerData containerData) {
+    if (ozoneContainer.getWriteChannel() instanceof XceiverServerRatis) {
+      XceiverServerRatis ratisServer =
+          (XceiverServerRatis) ozoneContainer.getWriteChannel();
+      final String originPipelineId = containerData.getOriginPipelineId();
+      if (originPipelineId == null || originPipelineId.isEmpty()) {
+        // In case the pipelineID is empty, just mark it for deletion.
+        // TODO: currently EC container goes through this path.
+        return true;
+      }
+      UUID pipelineUUID;
+      try {
+        pipelineUUID = UUID.fromString(originPipelineId);
+      } catch (IllegalArgumentException e) {
+        LOG.warn("Invalid pipelineID {} for container {}",
+            originPipelineId, containerData.getContainerID());
+        return false;
+      }
+      PipelineID pipelineID = PipelineID.valueOf(pipelineUUID);
+      // in case the ratis group does not exist, just mark it for deletion.
+      if (!ratisServer.isExist(pipelineID.getProtobuf())) {
+        return true;
+      }
+      try {
+        long minReplicatedIndex =
+            ratisServer.getMinReplicatedIndex(pipelineID);
+        long containerBCSID = containerData.getBlockCommitSequenceId();
+        if (minReplicatedIndex >= 0 && minReplicatedIndex < containerBCSID) {
+          LOG.warn("Close Container log Index {} is not replicated across all"
+                  + " the servers in the pipeline {} as the min replicated "
+                  + "index is {}. Deletion is not allowed in this container "
+                  + "yet.", containerBCSID,
+              containerData.getOriginPipelineId(), minReplicatedIndex);
+          return false;
+        } else {
           return true;
         }
-        UUID pipelineUUID;
-        try {
-          pipelineUUID = UUID.fromString(originPipelineId);
-        } catch (IllegalArgumentException e) {
-          LOG.warn("Invalid pipelineID {} for container {}",
-              originPipelineId, containerData.getContainerID());
-          return false;
-        }
-        PipelineID pipelineID = PipelineID.valueOf(pipelineUUID);
-        // in case the ratis group does not exist, just mark it for deletion.
+      } catch (IOException ioe) {
+        // in case of any exception check again whether the pipeline exist
+        // and in case the pipeline got destroyed, just mark it for deletion
         if (!ratisServer.isExist(pipelineID.getProtobuf())) {
           return true;
-        }
-        try {
-          long minReplicatedIndex =
-              ratisServer.getMinReplicatedIndex(pipelineID);
-          long containerBCSID = containerData.getBlockCommitSequenceId();
-          if (minReplicatedIndex >= 0 && minReplicatedIndex < containerBCSID) {
-            LOG.warn("Close Container log Index {} is not replicated across all"
-                    + " the servers in the pipeline {} as the min replicated "
-                    + "index is {}. Deletion is not allowed in this container "
-                    + "yet.", containerBCSID,
-                containerData.getOriginPipelineId(), minReplicatedIndex);
-            return false;
-          } else {
-            return true;
-          }
-        } catch (IOException ioe) {
-          // in case of any exception check again whether the pipeline exist
-          // and in case the pipeline got destroyed, just mark it for deletion
-          if (!ratisServer.isExist(pipelineID.getProtobuf())) {
-            return true;
-          } else {
-            LOG.info(ioe.getMessage());
-            return false;
-          }
+        } else {
+          LOG.info(ioe.getMessage());
+          return false;
         }
       }
-      return true;
     }
+    return true;
   }
 
   private static class ContainerBackgroundTaskResult

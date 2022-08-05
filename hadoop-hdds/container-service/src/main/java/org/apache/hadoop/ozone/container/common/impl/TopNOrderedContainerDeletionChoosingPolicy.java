@@ -18,19 +18,14 @@
 package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdds.scm.container.common.helpers
-    .StorageContainerException;
-import org.apache.hadoop.ozone.container.common.interfaces
-    .ContainerDeletionChoosingPolicy;
+import org.apache.hadoop.ozone.container.common.interfaces.ContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.ArrayList;
 import org.apache.hadoop.ozone.container.keyvalue.statemachine.background.BlockDeletingService.ContainerBlockInfo;
 
@@ -52,18 +47,17 @@ public class TopNOrderedContainerDeletionChoosingPolicy
 
   @Override
   public List<ContainerBlockInfo> chooseContainerForBlockDeletion(
-      int totalBlocks, Map<Long, ContainerData> candidateContainers)
-      throws StorageContainerException {
+      int totalBlocks, List<ContainerData> candidateContainers) {
 
     Preconditions.checkNotNull(candidateContainers,
         "Internal assertion: candidate containers cannot be null");
 
     List<ContainerBlockInfo> result = new ArrayList<>();
     List<KeyValueContainerData> orderedList = new LinkedList<>();
-    for (ContainerData entry : candidateContainers.values()) {
-      orderedList.add((KeyValueContainerData)entry);
+    for (ContainerData containerData : candidateContainers) {
+      orderedList.add((KeyValueContainerData) containerData);
     }
-    Collections.sort(orderedList, KEY_VALUE_CONTAINER_DATA_COMPARATOR);
+    orderedList.sort(KEY_VALUE_CONTAINER_DATA_COMPARATOR);
 
     // get top N list ordered by pending deletion blocks' number
     // Here we are returning containers based on totalBlocks which is basically

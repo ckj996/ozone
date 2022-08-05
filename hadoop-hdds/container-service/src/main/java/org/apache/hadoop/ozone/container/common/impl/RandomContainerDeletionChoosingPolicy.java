@@ -19,10 +19,7 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.hadoop.hdds.scm.container.common.helpers
-    .StorageContainerException;
-import org.apache.hadoop.ozone.container.common.interfaces
-    .ContainerDeletionChoosingPolicy;
+import org.apache.hadoop.ozone.container.common.interfaces.ContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +27,6 @@ import org.apache.hadoop.ozone.container.keyvalue.statemachine.background.BlockD
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Randomly choosing containers for block deletion.
@@ -42,15 +38,14 @@ public class RandomContainerDeletionChoosingPolicy
 
   @Override
   public List<ContainerBlockInfo> chooseContainerForBlockDeletion(
-      int blockCount, Map<Long, ContainerData> candidateContainers)
-      throws StorageContainerException {
+      int blockCount, List<ContainerData> candidateContainers) {
     Preconditions.checkNotNull(candidateContainers,
         "Internal assertion: candidate containers cannot be null");
 
     List<ContainerBlockInfo> result = new ArrayList<>();
     ContainerData[] values = new ContainerData[candidateContainers.size()];
     // to get a shuffle list
-    ContainerData[] shuffled = candidateContainers.values().toArray(values);
+    ContainerData[] shuffled = candidateContainers.toArray(values);
     ArrayUtils.shuffle(shuffled);
 
     // Here we are returning containers based on totalBlocks which is basically

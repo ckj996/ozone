@@ -24,7 +24,6 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.statemachine.background.BlockDeletingService.ContainerBlockInfo;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * This interface is used for choosing desired containers for
@@ -42,7 +41,7 @@ public interface ContainerDeletionChoosingPolicy {
    * @throws StorageContainerException
    */
   List<ContainerBlockInfo> chooseContainerForBlockDeletion(
-      int count, Map<Long, ContainerData> candidateContainers)
+      int count, List<ContainerData> candidateContainers)
       throws StorageContainerException;
 
   /**
