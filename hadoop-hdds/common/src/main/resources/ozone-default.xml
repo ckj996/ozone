@@ -3055,6 +3055,15 @@
   </property>
 
   <property>
+    <name>ozone.scm.container.lease.duration</name>
+    <value>60s</value>
+    <tag>OZONE, SCM, DATANODE</tag>
+    <description> The duration of the container lease. The container lease
+      is used to prevent the container from being closed while write is in
+      progress. The lease need to be renewed by the client periodically.
+    </description>
+  </property>
+  <property>
     <name>ozone.scm.datanode.ratis.volume.free-space.min</name>
     <value>1GB</value>
     <tag>OZONE, DATANODE</tag>

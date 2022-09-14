@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.client.ContainerBlockID;
 import org.apache.hadoop.hdds.client.ECReplicationConfig;
@@ -30,6 +31,8 @@ import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.client.StandaloneReplicationConfig;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.ContainerLeaseRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.ContainerLeaseResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.SCMBlockLocationRequest;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.SCMBlockLocationResponse;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.Type;
@@ -45,6 +48,7 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .SortDatanodesResponseProto;
 import org.apache.hadoop.hdds.scm.AddSCMRequest;
 import org.apache.hadoop.hdds.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
@@ -206,6 +210,46 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
     }
 
     return blocks;
+  }
+
+  /**
+   * Asks SCM for acquire or renew lease on blocks.
+   * Hint SCM that leases on some blocks can be dropped.
+   *
+   * @param clientID            - id of the client.
+   * @param containersToAcquire - blocks to acquire lease.
+   * @return a triple of blocksLeased, validFrom and ExpiresAt.
+   * @throws IOException if there is an error.
+   */
+  @Override
+  public Triple<List<ContainerID>, Long, Long> containerLease(long clientID,
+      List<ContainerID> containersToAcquire) throws IOException {
+
+    ContainerLeaseRequestProto.Builder requestBuilder =
+        ContainerLeaseRequestProto.newBuilder()
+            .setClientID(clientID)
+            .addAllContainerIDs(
+                containersToAcquire.stream().map(ContainerID::getProtobuf)
+                    .collect(Collectors.toList()));
+    ContainerLeaseRequestProto request = requestBuilder.build();
+
+    SCMBlockLocationRequest wrapper =
+        createSCMBlockRequest(Type.ContainerLease)
+            .setContainerLeaseRequest(request)
+            .build();
+
+    final SCMBlockLocationResponse wrappedResponse =
+        handleError(submitRequest(wrapper));
+    final ContainerLeaseResponseProto response =
+        wrappedResponse.getContainerLeaseResponse();
+
+    List<ContainerID> containersAcquired =
+        response.getContainerIDsList().stream()
+            .map(ContainerID::getFromProtobuf)
+            .collect(Collectors.toList());
+
+    return Triple.of(containersAcquired, response.getValidFrom(),
+        response.getExpiresAt());
   }
 
   /**

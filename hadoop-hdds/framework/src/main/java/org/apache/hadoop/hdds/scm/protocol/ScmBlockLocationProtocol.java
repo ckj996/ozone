@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hdds.scm.protocol;
 
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.AddSCMRequest;
 import org.apache.hadoop.hdds.scm.ScmConfig;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.hdds.scm.ScmInfo;
@@ -86,6 +88,18 @@ public interface ScmBlockLocationProtocol extends Closeable {
   List<AllocatedBlock> allocateBlock(long size, int numBlocks,
       ReplicationConfig replicationConfig, String owner,
       ExcludeList excludeList) throws IOException;
+
+  /**
+   * Asks SCM for acquire or renew lease on blocks.
+   * Hint SCM that leases on some blocks can be dropped.
+   *
+   * @param clientID            - id of the client.
+   * @param containersToAcquire - blocks to acquire lease.
+   * @return a triple of blocksLeased, validFrom and ExpiresAt.
+   * @throws IOException if there is an error.
+   */
+  Triple<List<ContainerID>, Long, Long> containerLease(long clientID,
+      List<ContainerID> containersToAcquire) throws IOException;
 
   /**
    * Delete blocks for a set of object keys.

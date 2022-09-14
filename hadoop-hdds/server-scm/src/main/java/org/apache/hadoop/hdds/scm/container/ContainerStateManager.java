@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.scm.container;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -179,6 +180,15 @@ public interface ContainerStateManager {
    * @throws IOException
    */
   void reinitialize(Table<ContainerID, ContainerInfo> containerStore)
+      throws IOException;
+
+  /**
+   * Acquire or renew lease of containers.
+   * @param containerIDs List of container IDs to acquire lease.
+   * @param expiresAt new lease expiry time.
+   * @return list of container IDs whose lease is renewed.
+   */
+  List<ContainerID> acquireLease(List<ContainerID> containerIDs, long expiresAt)
       throws IOException;
 
   /**

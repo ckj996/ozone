@@ -39,6 +39,7 @@ enum Type {
   GetScmInfo         = 13;
   SortDatanodes      = 14;
   AddScm             = 15;
+  ContainerLease     = 16;
 }
 
 message SCMBlockLocationRequest {
@@ -56,6 +57,7 @@ message SCMBlockLocationRequest {
   optional hadoop.hdds.GetScmInfoRequestProto getScmInfoRequest         = 13;
   optional SortDatanodesRequestProto          sortDatanodesRequest      = 14;
   optional hadoop.hdds.AddScmRequestProto     addScmRequestProto       = 15;
+  optional ContainerLeaseRequestProto         containerLeaseRequest     = 16;
 }
 
 message SCMBlockLocationResponse {
@@ -80,6 +82,7 @@ message SCMBlockLocationResponse {
   optional hadoop.hdds.GetScmInfoResponseProto getScmInfoResponse         = 13;
   optional SortDatanodesResponseProto          sortDatanodesResponse      = 14;
   optional hadoop.hdds.AddScmResponseProto     addScmResponse        = 15;
+  optional ContainerLeaseResponseProto         containerLeaseResponse     = 16;
 }
 
 /**
@@ -219,6 +222,17 @@ message SortDatanodesRequestProto{
 
 message SortDatanodesResponseProto{
   repeated DatanodeDetailsProto node = 1;
+}
+
+message ContainerLeaseRequestProto {
+  optional uint64 clientID = 1;
+  repeated hadoop.hdds.ContainerID containerIDs = 2;
+}
+
+message ContainerLeaseResponseProto {
+  optional uint64 validFrom = 1;
+  optional uint64 expiresAt = 2;
+  repeated hadoop.hdds.ContainerID containerIDs = 3;
 }
 
 /**
