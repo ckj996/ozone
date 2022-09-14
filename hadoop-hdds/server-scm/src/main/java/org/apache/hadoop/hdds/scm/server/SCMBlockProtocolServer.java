@@ -23,11 +23,14 @@ package org.apache.hadoop.hdds.scm.server;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
@@ -35,7 +38,9 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos;
 import org.apache.hadoop.hdds.scm.AddSCMRequest;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.DeleteBlockResult;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
@@ -70,6 +75,7 @@ import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.IO_
 import static org.apache.hadoop.hdds.scm.server.StorageContainerManager.startRpcServer;
 import static org.apache.hadoop.hdds.server.ServerUtils.getRemoteUserName;
 import static org.apache.hadoop.hdds.server.ServerUtils.updateRPCListenAddress;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,6 +97,7 @@ public class SCMBlockProtocolServer implements
   private final InetSocketAddress blockRpcAddress;
   private final ProtocolMessageMetrics<ProtocolMessageEnum>
       protocolMessageMetrics;
+  private final long leaseDuration;
 
   /**
    * The RPC server that listens to requests from block service clients.
@@ -102,6 +109,11 @@ public class SCMBlockProtocolServer implements
     final int handlerCount =
         conf.getInt(OZONE_SCM_HANDLER_COUNT_KEY,
             OZONE_SCM_HANDLER_COUNT_DEFAULT);
+
+    leaseDuration = conf.getTimeDuration(
+        ScmConfigKeys.OZONE_SCM_CONTAINER_LEASE_DURATION,
+        ScmConfigKeys.OZONE_SCM_CONTAINER_LEASE_DURATION_DEFAULT,
+        TimeUnit.SECONDS);
 
     RPC.setProtocolEngine(conf, ScmBlockLocationProtocolPB.class,
         ProtobufRpcEngine.class);
@@ -208,6 +220,20 @@ public class SCMBlockProtocolServer implements
           SCMAction.ALLOCATE_BLOCK, auditMap, ex));
       throw ex;
     }
+  }
+
+  @Override
+  public Triple<List<ContainerID>, Long, Long> containerLease(long clientID,
+      List<ContainerID> containersToAcquire) throws IOException {
+
+    long now = Instant.now().getEpochSecond();
+    long expiresAt = now + leaseDuration;
+
+    List<ContainerID> containersAcquired = scm.getContainerManager()
+        .getContainerStateManager()
+        .acquireLease(containersToAcquire, expiresAt);
+
+    return Triple.of(containersAcquired, now, expiresAt);
   }
 
   /**

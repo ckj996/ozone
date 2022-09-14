@@ -19,8 +19,10 @@ package org.apache.hadoop.hdds.scm.container;
 
 import java.io.IOException;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -131,6 +133,8 @@ public final class ContainerStateManagerImpl
   private final Map<LifeCycleEvent, CheckedConsumer<ContainerInfo, IOException>>
       containerStateChangeActions;
 
+  private final Map<ContainerID, Long> containerLeases;
+
   // Protect containers and containerStore against the potential
   // contentions between RaftServer and ContainerManager.
   private final ReadWriteLock lock = new ReentrantReadWriteLock(true);
@@ -158,6 +162,7 @@ public final class ContainerStateManagerImpl
     this.lastUsedMap = new ConcurrentHashMap<>();
     this.containerStateChangeActions = getContainerStateChangeActions();
     this.transactionBuffer = buffer;
+    this.containerLeases = new ConcurrentHashMap<>();
     this.lockManager =
         new LockManager<>(confSrc, true);
     initialize();
@@ -538,6 +543,21 @@ public final class ContainerStateManagerImpl
     } finally {
       lock.writeLock().unlock();
     }
+  }
+
+  @Override
+  public List<ContainerID> acquireLease(List<ContainerID> containerIDs,
+      long expiresAt) {
+    List<ContainerID> acquired = new ArrayList<>();
+    for (ContainerID id : containerIDs) {
+      ContainerInfo info = getContainer(id);
+      if (info != null && info.getState() == OPEN) {
+        long old = containerLeases.getOrDefault(id, 0L);
+        containerLeases.put(id, Math.max(old, expiresAt));
+        acquired.add(id);
+      }
+    }
+    return acquired;
   }
 
   @Override

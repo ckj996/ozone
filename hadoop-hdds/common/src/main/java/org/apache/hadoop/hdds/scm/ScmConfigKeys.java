@@ -577,6 +577,11 @@ public final class ScmConfigKeys {
 
   public static final String OZONE_AUDIT_LOG_DEBUG_CMD_LIST_SCMAUDIT =
       "ozone.audit.log.debug.cmd.list.scmaudit";
+  public static final String OZONE_SCM_CONTAINER_LEASE_DURATION =
+      "ozone.scm.container.lease.duration";
+  public static final String OZONE_SCM_CONTAINER_LEASE_DURATION_DEFAULT =
+      "60s";
+
   /**
    * Never constructed.
    */

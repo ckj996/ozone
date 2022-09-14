@@ -277,6 +277,8 @@ public final class OmUtils {
       // write to OM DB. And therefore it doesn't need a OMClientRequest.
       // Although indirectly the Ranger sync service task could invoke write
       // operation SetRangerServiceVersion.
+    case ContainerLease:
+      // ContainerLease doesn't write to OM DB. It is relayed to SCM.
     case GetKeyInfo:
       return true;
     case CreateVolume:

@@ -62,6 +62,7 @@ enum Type {
   DeleteKeys = 38;
   RenameKeys = 39;
   DeleteOpenKeys = 40;
+  ContainerLease = 41;
 
   InitiateMultiPartUpload = 45;
   CommitMultiPartUpload = 46;
@@ -163,6 +164,7 @@ message OMRequest {
   optional DeleteKeysRequest                deleteKeysRequest              = 38;
   optional RenameKeysRequest                renameKeysRequest              = 39;
   optional DeleteOpenKeysRequest            deleteOpenKeysRequest          = 40;
+  optional ContainerLeaseRequest            ContainerLeaseRequest          = 41;
 
   optional MultipartInfoInitiateRequest     initiateMultiPartUploadRequest = 45;
   optional MultipartCommitUploadPartRequest commitMultiPartUploadRequest   = 46;
@@ -269,6 +271,7 @@ message OMResponse {
   optional AllocateBlockResponse             allocateBlockResponse         = 37;
   optional DeleteKeysResponse                deleteKeysResponse            = 38;
   optional RenameKeysResponse                renameKeysResponse            = 39;
+  optional ContainerLeaseResponse            containerLeaseResponse        = 41;
 
   optional MultipartInfoInitiateResponse   initiateMultiPartUploadResponse = 45;
   optional MultipartCommitUploadPartResponse commitMultiPartUploadResponse = 46;
@@ -1250,6 +1253,17 @@ message AllocateBlockRequest {
 message AllocateBlockResponse {
 
     optional KeyLocation keyLocation = 2;
+}
+
+message ContainerLeaseRequest {
+  optional uint64 clientID = 1;
+  repeated hadoop.hdds.ContainerID containerIDs = 2;
+}
+
+message ContainerLeaseResponse {
+  optional uint64 validFrom = 1; // Issued date in Unix epoch time (seconds)
+  optional uint64 expiresAt = 2; // Expiration date in Unix epoch time (seconds)
+  repeated hadoop.hdds.ContainerID containerIDs = 3;
 }
 
 message ServiceListRequest {

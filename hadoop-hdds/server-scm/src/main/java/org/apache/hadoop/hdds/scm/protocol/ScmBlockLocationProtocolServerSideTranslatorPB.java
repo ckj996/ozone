@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -29,6 +30,8 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateBlockResponse;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateScmBlockRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateScmBlockResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.ContainerLeaseRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.ContainerLeaseResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.DeleteKeyBlocksResultProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksResponseProto;
@@ -39,6 +42,7 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.Sort
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.Status;
 import org.apache.hadoop.hdds.scm.AddSCMRequest;
 import org.apache.hadoop.hdds.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
@@ -159,6 +163,10 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
             request.getSortDatanodesRequest(), request.getVersion()
         ));
         break;
+      case ContainerLease:
+        response.setContainerLeaseResponse(containerLease(
+            request.getContainerLeaseRequest()));
+        break;
       default:
         // Should never happen
         throw new IOException("Unknown Operation " + request.getCmdType() +
@@ -212,6 +220,26 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
           .setPipeline(block.getPipeline().getProtobufMessage(clientVersion)));
     }
 
+    return builder.build();
+  }
+
+  public ContainerLeaseResponseProto containerLease(
+      ContainerLeaseRequestProto request) throws IOException {
+
+    Triple<List<ContainerID>, Long, Long> result = impl.containerLease(
+        request.getClientID(),
+        request.getContainerIDsList().stream()
+            .map(ContainerID::getFromProtobuf)
+            .collect(Collectors.toList())
+    );
+
+    ContainerLeaseResponseProto.Builder builder =
+        ContainerLeaseResponseProto.newBuilder()
+            .setValidFrom(result.getMiddle())
+            .setExpiresAt(result.getRight());
+    for (ContainerID id : result.getLeft()) {
+      builder.addContainerIDs(id.getProtobuf());
+    }
     return builder.build();
   }
 
