@@ -166,6 +166,10 @@ public class TestContainerStateManager {
     // Add one fake value
     toLease.add(ContainerID.valueOf(RandomUtils.nextLong()));
     long now = Instant.now().getEpochSecond();
+    // Lease prior to now should be ignored
+    Assertions.assertTrue(containerStateManager
+        .acquireLease(toLease, now - 1)
+        .isEmpty());
     List<ContainerID> leased = containerStateManager
         .acquireLease(toLease, now + 1);
     Assertions.assertEquals(containers.stream()

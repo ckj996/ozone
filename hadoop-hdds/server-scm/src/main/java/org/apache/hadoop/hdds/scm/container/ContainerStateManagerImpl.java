@@ -19,7 +19,9 @@ package org.apache.hadoop.hdds.scm.container;
 
 import java.io.IOException;
 import java.lang.reflect.Proxy;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
@@ -548,6 +550,9 @@ public final class ContainerStateManagerImpl
   @Override
   public List<ContainerID> acquireLease(List<ContainerID> containerIDs,
       long expiresAt) {
+    if (expiresAt <= Instant.now().getEpochSecond()) {
+      return Collections.emptyList();
+    }
     List<ContainerID> acquired = new ArrayList<>();
     for (ContainerID id : containerIDs) {
       ContainerInfo info = getContainer(id);
