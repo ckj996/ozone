@@ -19,11 +19,16 @@ package org.apache.hadoop.hdds.scm.container;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.client.StandaloneReplicationConfig;
@@ -147,6 +152,26 @@ public class TestContainerStateManager {
 
     Assertions.assertEquals(2, replicas.size());
     Assertions.assertEquals(3, c1.getReplicationConfig().getRequiredNodes());
+  }
+
+  @Test
+  public void testContainerLease() throws Exception {
+    List<ContainerInfo> containers = new ArrayList<>();
+    for (int i = 0; i < 3; i++) {
+      containers.add(allocateContainer());
+    }
+    List<ContainerID> toLease = containers.stream()
+        .map(ContainerInfo::containerID)
+        .collect(Collectors.toList());
+    // Add one fake value
+    toLease.add(ContainerID.valueOf(RandomUtils.nextLong()));
+    long now = Instant.now().getEpochSecond();
+    List<ContainerID> leased = containerStateManager
+        .acquireLease(toLease, now + 1);
+    Assertions.assertEquals(containers.stream()
+            .map(ContainerInfo::containerID)
+            .collect(Collectors.toSet()),
+        new HashSet<>(leased));
   }
 
   private void addReplica(ContainerInfo cont, DatanodeDetails node) {
