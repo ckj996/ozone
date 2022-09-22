@@ -566,6 +566,11 @@ public final class ContainerStateManagerImpl
   }
 
   @Override
+  public long queryLease(ContainerID id) {
+    return containerLeases.getOrDefault(id, 0L);
+  }
+
+  @Override
   public void close() throws IOException {
     try {
       containerStore.close();

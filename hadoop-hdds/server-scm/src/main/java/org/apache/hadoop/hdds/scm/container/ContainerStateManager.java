@@ -192,6 +192,13 @@ public interface ContainerStateManager {
       throws IOException;
 
   /**
+   * Get the container lease expiry time.
+   * @param containerID the container ID to check.
+   * @return the container lease expiry time.
+   */
+  long queryLease(ContainerID containerID);
+
+  /**
    *
    */
   void close() throws IOException;

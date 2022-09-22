@@ -17,6 +17,7 @@
 package org.apache.hadoop.hdds.scm.container;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -77,6 +78,18 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
             containerID, LifeCycleEvent.FINALIZE);
       }
 
+      // Check container lease before send command to datanodes.
+      long leaseEndTime = 0;
+      long currentTime = 0;
+      do {
+        Thread.sleep((leaseEndTime - currentTime) * 1000);
+        leaseEndTime = containerManager.getContainerStateManager()
+            .queryLease(containerID);
+        currentTime = Instant.now().getEpochSecond();
+        LOG.info("Container {} lease end time is {}, current time is {}",
+            containerID, leaseEndTime, currentTime);
+      } while (leaseEndTime > currentTime);
+
       // ContainerInfo has to read again after the above state change.
       final ContainerInfo container = containerManager
           .getContainer(containerID);
@@ -110,6 +123,8 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
     } catch (IOException | InvalidStateTransitionException |
              TimeoutException ex) {
       LOG.error("Failed to close the container {}.", containerID, ex);
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted while waiting for container lease to expire.", e);
     }
   }
 
