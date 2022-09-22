@@ -641,7 +641,9 @@ public class SCMClientProtocolServer implements
     final UserGroupInformation remoteUser = getRemoteUser();
     final Map<String, String> auditMap = Maps.newHashMap();
     auditMap.put("containerID", String.valueOf(containerID));
-    auditMap.put("remoteUser", remoteUser.getUserName());
+    if (remoteUser != null) {
+      auditMap.put("remoteUser", remoteUser.getUserName());
+    }
     try {
       scm.checkAdminAccess(remoteUser);
       final ContainerID cid = ContainerID.valueOf(containerID);

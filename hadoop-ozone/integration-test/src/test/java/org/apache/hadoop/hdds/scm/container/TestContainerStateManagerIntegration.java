@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,8 +36,10 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.common.statemachine.InvalidStateTransitionException;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.ozone.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.apache.ozone.test.tag.Flaky;
 import org.junit.jupiter.api.Test;
@@ -48,6 +51,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_DATANODE_PIPELINE_LIMIT;
@@ -72,6 +76,8 @@ public class TestContainerStateManagerIntegration {
   public void setup() throws Exception {
     conf = new OzoneConfiguration();
     conf.setInt(OZONE_DATANODE_PIPELINE_LIMIT, 1);
+    conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_CONTAINER_LEASE_DURATION,
+        2, TimeUnit.SECONDS);
     numContainerPerOwnerInPipeline =
         conf.getInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT,
             ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT_DEFAULT);
@@ -140,6 +146,48 @@ public class TestContainerStateManagerIntegration {
     Assert.assertNotNull(info2);
 
     Assert.assertNotEquals(info.containerID(), info2.containerID());
+  }
+
+  @Test
+  public void testContainerLease() throws Exception {
+    ContainerWithPipeline container = scm.getClientProtocolServer()
+        .allocateContainer(SCMTestUtils.getReplicationType(conf),
+            SCMTestUtils.getReplicationFactor(conf), OzoneConsts.OZONE);
+    ContainerInfo info = containerManager
+        .getMatchingContainer(OzoneConsts.GB * 3, OzoneConsts.OZONE,
+            container.getPipeline());
+    Assertions.assertNotNull(info);
+
+    final long clientID = RandomUtils.nextLong();
+    scm.getBlockProtocolServer().containerLease(
+        clientID, Collections.singletonList(info.containerID()));
+
+    scm.getClientProtocolServer().closeContainer(info.getContainerID());
+
+    GenericTestUtils.waitFor(() -> {
+      try {
+        return containerManager.getContainer(info.containerID()).getState()
+            == HddsProtos.LifeCycleState.CLOSING;
+      } catch (ContainerNotFoundException e) {
+        throw new RuntimeException(e);
+      }
+    }, 100, 1000);
+
+    Thread.sleep(1000);
+
+    // Container in lease, so should not close
+    Assertions.assertEquals(HddsProtos.LifeCycleState.CLOSING,
+        containerManager.getContainer(info.containerID()).getState());
+
+    long leaseDuration = conf.getTimeDuration(
+        ScmConfigKeys.OZONE_SCM_CONTAINER_LEASE_DURATION,
+        ScmConfigKeys.OZONE_SCM_CONTAINER_LEASE_DURATION_DEFAULT,
+        TimeUnit.SECONDS);
+    Thread.sleep(leaseDuration * 1000);
+
+    // TODO: Lease expired, container should be in CLOSED state
+    Assertions.assertEquals(HddsProtos.LifeCycleState.CLOSING,
+        containerManager.getContainer(info.containerID()).getState());
   }
 
   @Test
