@@ -532,7 +532,9 @@ public final class ContainerStateManagerImpl
     List<ContainerID> acquired = new ArrayList<>();
     for (ContainerID id : containerIDs) {
       ContainerInfo info = getContainer(id);
-      if (info != null && info.getState() == OPEN) {
+      // We should grant lease for CLOSING container,
+      // on SCM it is CLOSING, on DN it may be OPEN.
+      if (info != null && info.getState() != CLOSED) {
         long old = containerLeases.getOrDefault(id, 0L);
         containerLeases.put(id, Math.max(old, expiresAt));
         acquired.add(id);
