@@ -22,6 +22,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.commons.lang3.tuple.Triple;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -263,6 +265,16 @@ public interface OzoneManagerProtocol
     throw new UnsupportedOperationException("OzoneManager does not require " +
         "this to be implemented, as write requests use a new approach.");
   }
+
+  /**
+   * Acquire a lease of containers.
+   * @param clientID - the clientID.
+   * @param containersToAcquire - List of container to acquire lease.
+   * @return A triple of containers acquired, valid from, expires at.
+   * @throws IOException when error happens.
+   */
+  Triple<List<ContainerID>, Long, Long> containerLease(long clientID,
+      List<ContainerID> containersToAcquire) throws IOException;
 
   /**
    * Look up for the container of an existing key.

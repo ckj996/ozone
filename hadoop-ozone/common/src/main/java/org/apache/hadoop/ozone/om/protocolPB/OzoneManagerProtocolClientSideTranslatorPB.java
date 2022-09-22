@@ -24,11 +24,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.client.ECReplicationConfig;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos
     .UpgradeFinalizationStatus;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.Text;
@@ -76,6 +78,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketI
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CommitKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ContainerLeaseRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ContainerLeaseResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDirectoryRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateFileRequest;
@@ -737,6 +741,26 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .getAllocateBlockResponse();
     return OmKeyLocationInfo.getFromProtobuf(resp.getKeyLocation());
   }
+
+  @Override
+  public Triple<List<ContainerID>, Long, Long> containerLease(long clientID,
+      List<ContainerID> containersToAcquire) throws IOException {
+    OMRequest omRequest = createOMRequest(Type.ContainerLease)
+        .setContainerLeaseRequest(ContainerLeaseRequest.newBuilder()
+            .setClientID(clientID)
+            .addAllContainerIDs(containersToAcquire.stream().map(
+                ContainerID::getProtobuf).collect(Collectors.toList())))
+        .build();
+    ContainerLeaseResponse resp = handleError(submitRequest(omRequest))
+        .getContainerLeaseResponse();
+
+    List<ContainerID> containerIDs = resp.getContainerIDsList().stream().map(
+        ContainerID::getFromProtobuf).collect(Collectors.toList());
+    long validFrom = resp.getValidFrom();
+    long expiresAt = resp.getExpiresAt();
+    return Triple.of(containerIDs, validFrom, expiresAt);
+  }
+
   @Override
   public void commitKey(OmKeyArgs args, long clientId)
       throws IOException {
