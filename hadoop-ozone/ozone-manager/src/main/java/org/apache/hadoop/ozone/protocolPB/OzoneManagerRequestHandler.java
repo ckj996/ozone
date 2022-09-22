@@ -28,10 +28,12 @@ import com.google.protobuf.ServiceException;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.hdds.client.ECReplicationConfig;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.UpgradeFinalizationStatus;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.utils.db.SequenceNumberNotFoundException;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -66,6 +68,8 @@ import org.apache.hadoop.ozone.om.upgrade.DisallowedUntilLayoutVersion;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ContainerLeaseRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ContainerLeaseResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.FinalizeUpgradeProgressRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.FinalizeUpgradeProgressResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusRequest;
@@ -163,6 +167,24 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         CheckVolumeAccessResponse checkVolumeAccessResponse = checkVolumeAccess(
             request.getCheckVolumeAccessRequest());
         responseBuilder.setCheckVolumeAccessResponse(checkVolumeAccessResponse);
+        break;
+      case ContainerLease:
+        ContainerLeaseRequest containerLeaseRequest = request
+            .getContainerLeaseRequest();
+        Triple<List<ContainerID>, Long, Long> result = impl.containerLease(
+            containerLeaseRequest.getClientID(),
+            containerLeaseRequest.getContainerIDsList().stream()
+                .map(ContainerID::getFromProtobuf)
+                .collect(Collectors.toList()));
+        ContainerLeaseResponse containerLeaseResponse =
+            ContainerLeaseResponse.newBuilder()
+                .addAllContainerIDs(result.getLeft().stream()
+                    .map(ContainerID::getProtobuf)
+                    .collect(Collectors.toList()))
+                .setValidFrom(result.getMiddle())
+                .setExpiresAt(result.getRight())
+                .build();
+        responseBuilder.setContainerLeaseResponse(containerLeaseResponse);
         break;
       case InfoVolume:
         InfoVolumeResponse infoVolumeResponse = infoVolume(
