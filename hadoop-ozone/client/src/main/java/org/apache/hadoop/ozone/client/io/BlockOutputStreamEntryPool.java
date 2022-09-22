@@ -19,16 +19,22 @@
 package org.apache.hadoop.ozone.client.io;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ByteStringConversion;
 import org.apache.hadoop.hdds.scm.ContainerClientMetrics;
 import org.apache.hadoop.hdds.scm.OzoneClientConfig;
 import org.apache.hadoop.hdds.scm.XceiverClientFactory;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.storage.BufferPool;
@@ -81,6 +87,7 @@ public class BlockOutputStreamEntryPool {
   private final long openID;
   private final ExcludeList excludeList;
   private final ContainerClientMetrics clientMetrics;
+  private AtomicLong nextContainerLeaseRenew;
 
   @SuppressWarnings({"parameternumber", "squid:S00107"})
   public BlockOutputStreamEntryPool(
@@ -114,6 +121,8 @@ public class BlockOutputStreamEntryPool {
             ByteStringConversion
                 .createByteBufferConversion(unsafeByteBufferConversion));
     this.clientMetrics = clientMetrics;
+    this.nextContainerLeaseRenew = new AtomicLong(0);
+    new Thread(this::periodicRenewLease).start();
   }
 
   ExcludeList createExcludeList() {
@@ -139,6 +148,8 @@ public class BlockOutputStreamEntryPool {
     openID = -1;
     excludeList = new ExcludeList();
     this.clientMetrics = clientMetrics;
+    this.nextContainerLeaseRenew = new AtomicLong(0);
+    new Thread(this::periodicRenewLease).start();
   }
 
   /**
@@ -191,6 +202,57 @@ public class BlockOutputStreamEntryPool {
   private void addKeyLocationInfo(OmKeyLocationInfo subKeyInfo) {
     Preconditions.checkNotNull(subKeyInfo.getPipeline());
     streamEntries.add(createStreamEntry(subKeyInfo));
+  }
+
+  private void periodicRenewLease() {
+    while (!Thread.interrupted()) {
+      try {
+        long now = Instant.now().getEpochSecond();
+        long nextRenew = nextContainerLeaseRenew.get();
+        if (now >= nextRenew) {
+          renewContainerLease();
+        } else {
+          Thread.sleep((nextRenew - now) * 1000);
+        }
+      } catch (IOException e) {
+        LOG.error("Failed to renew container lease", e);
+      } catch (InterruptedException e) {
+        LOG.info("Periodic renew lease thread interrupted");
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+  private void renewContainerLease() throws IOException {
+    List<ContainerID> containers = streamEntries.stream()
+        .filter(entry -> !entry.isClosed())
+        .map(entry -> entry.getBlockID().getContainerID())
+        .map(ContainerID::valueOf)
+        .collect(Collectors.toList());
+    Triple<List<ContainerID>, Long, Long> result =
+        omClient.containerLease(0L, containers);
+
+    LOG.info("Time {}, Requested lease for {} containers, " +
+            "renewed {} containers, valid from {} to {}",
+        Instant.now().getEpochSecond(),
+        containers.size(), result.getLeft().size(),
+        result.getMiddle(), result.getRight());
+
+    Set<Long> renewed = result.getLeft().stream()
+        .map(ContainerID::getId)
+        .collect(Collectors.toSet());
+
+    // FIXME: find a more proper next renew time.
+    nextContainerLeaseRenew.set(result.getRight() - 10000);
+
+    for (BlockOutputStreamEntry entry : streamEntries) {
+      if (!entry.isClosed() &&
+          !renewed.contains(entry.getBlockID().getContainerID())) {
+        LOG.warn("Lease renewal failed for container {}, closing stream",
+            entry.getBlockID().getContainerID());
+        entry.close();
+      }
+    }
   }
 
   /**
@@ -311,6 +373,7 @@ public class BlockOutputStreamEntryPool {
     OmKeyLocationInfo subKeyInfo =
         omClient.allocateBlock(keyArgs, openID, excludeList);
     addKeyLocationInfo(subKeyInfo);
+    renewContainerLease();
   }
 
   /**
