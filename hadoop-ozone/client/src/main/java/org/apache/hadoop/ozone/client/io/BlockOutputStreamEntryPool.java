@@ -224,13 +224,19 @@ public class BlockOutputStreamEntryPool {
   }
 
   private void renewContainerLease() throws IOException {
-    List<ContainerID> containers = streamEntries.stream()
+    Set<ContainerID> containers = streamEntries.stream()
         .filter(entry -> !entry.isClosed())
         .map(entry -> entry.getBlockID().getContainerID())
         .map(ContainerID::valueOf)
-        .collect(Collectors.toList());
+        .collect(Collectors.toSet());
+
+    if (containers.isEmpty()) {
+      nextContainerLeaseRenew.set(Instant.now().getEpochSecond() + 10);
+      return;
+    }
+
     Triple<List<ContainerID>, Long, Long> result =
-        omClient.containerLease(0L, containers);
+        omClient.containerLease(0L, new ArrayList<>(containers));
 
     LOG.info("Time {}, Requested lease for {} containers, " +
             "renewed {} containers, valid from {} to {}",
@@ -243,7 +249,7 @@ public class BlockOutputStreamEntryPool {
         .collect(Collectors.toSet());
 
     // FIXME: find a more proper next renew time.
-    nextContainerLeaseRenew.set(result.getRight() - 10000);
+    nextContainerLeaseRenew.set(result.getRight() - 10);
 
     for (BlockOutputStreamEntry entry : streamEntries) {
       if (!entry.isClosed() &&
