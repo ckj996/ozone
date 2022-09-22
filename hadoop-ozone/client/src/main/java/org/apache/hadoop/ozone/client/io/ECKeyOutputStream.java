@@ -170,6 +170,9 @@ public final class ECKeyOutputStream extends KeyOutputStream {
   }
 
   private StripeWriteStatus rewriteStripeToNewBlockGroup() throws IOException {
+
+    LOG.warn("Rewriting stripe to new block group");
+
     // Rollback the length/offset updated as part of this failed stripe write.
     final ByteBuffer[] dataBuffers = ecChunkBufferCache.getDataBuffers();
     offset -= Arrays.stream(dataBuffers).mapToInt(Buffer::limit).sum();
@@ -235,9 +238,7 @@ public final class ECKeyOutputStream extends KeyOutputStream {
     List<ECBlockOutputStream> failedStreams =
         streamEntry.streamsWithWriteFailure();
     if (!failedStreams.isEmpty()) {
-      if (LOG.isDebugEnabled()) {
-        logStreamError(failedStreams, "EC stripe write");
-      }
+      logStreamError(failedStreams, "EC stripe write");
       excludePipelineAndFailedDN(streamEntry.getPipeline(), failedStreams);
       return StripeWriteStatus.FAILED;
     }
@@ -251,9 +252,7 @@ public final class ECKeyOutputStream extends KeyOutputStream {
 
     failedStreams = streamEntry.streamsWithPutBlockFailure();
     if (!failedStreams.isEmpty()) {
-      if (LOG.isDebugEnabled()) {
-        logStreamError(failedStreams, "Put block");
-      }
+      logStreamError(failedStreams, "Put block");
       excludePipelineAndFailedDN(streamEntry.getPipeline(), failedStreams);
       return StripeWriteStatus.FAILED;
     }
@@ -405,7 +404,7 @@ public final class ECKeyOutputStream extends KeyOutputStream {
       }
       current.write(b, off, writeLen);
     } catch (IOException ioe) {
-      LOG.debug(
+      LOG.warn(
           "Exception while writing the cell buffers. The writeLen: " + writeLen
               + ". The block internal index is: "
               + current

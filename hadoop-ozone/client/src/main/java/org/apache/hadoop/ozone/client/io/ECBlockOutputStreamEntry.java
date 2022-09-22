@@ -337,10 +337,8 @@ public class ECBlockOutputStreamEntry extends BlockOutputStreamEntry {
           ContainerCommandResponseProto> chunkWriteResponseFuture) {
 
     if (chunkWriteResponseFuture == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Failed to reap response from datanode {}",
-            outputStream.getDatanodeDetails());
-      }
+      LOG.debug("Failed to reap response from datanode {}",
+          outputStream.getDatanodeDetails());
       return true;
     }
 
@@ -360,10 +358,8 @@ public class ECBlockOutputStreamEntry extends BlockOutputStreamEntry {
     }
 
     if (containerCommandResponseProto == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Empty response from datanode {}",
-            outputStream.getDatanodeDetails());
-      }
+      LOG.debug("Empty response from datanode {}",
+          outputStream.getDatanodeDetails());
       return true;
     }
 
