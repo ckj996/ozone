@@ -120,10 +120,9 @@ public class FilePerBlockStrategy implements ChunkManager {
     boolean overwrite = validateChunkForOverwrite(chunkFile, info);
     long len = info.getLen();
     long offset = info.getOffset();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Writing chunk {} (overwrite: {}) in stage {} to file {}",
-          info, overwrite, stage, chunkFile);
-    }
+
+    LOG.warn("Writing chunk {} (overwrite: {}) in stage {} to file {}",
+        info, overwrite, stage, chunkFile);
 
     HddsVolume volume = containerData.getVolume();
 
@@ -196,6 +195,9 @@ public class FilePerBlockStrategy implements ChunkManager {
   public void finishWriteChunks(KeyValueContainer container,
       BlockData blockData) throws IOException {
     File chunkFile = getChunkFile(container, blockData.getBlockID(), null);
+
+    LOG.warn("Finish writing chunk to file {}", chunkFile);
+
     try {
       files.close(chunkFile);
       verifyChunkFileExists(chunkFile);

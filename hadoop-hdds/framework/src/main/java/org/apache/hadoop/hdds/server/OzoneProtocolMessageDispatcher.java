@@ -89,14 +89,13 @@ public class OzoneProtocolMessageDispatcher<REQUEST, RESPONSE, TYPE> {
       protocolMessageMetrics.increment(type,
           System.currentTimeMillis() - startTime);
 
-      if (logger.isTraceEnabled()) {
-        logger.trace(
-            "[service={}] [type={}] request is processed. Response: "
-                + "<json>{}</json>",
-            serviceName,
-            type,
-            escapeNewLines(responsePreprocessor.apply(response)));
-      }
+      logger.warn(
+          "[service={}] [type={}] request is processed. Response: "
+              + "<json>{}</json>",
+          serviceName,
+          type,
+          escapeNewLines(responsePreprocessor.apply(response)));
+
       return response;
 
     } finally {
