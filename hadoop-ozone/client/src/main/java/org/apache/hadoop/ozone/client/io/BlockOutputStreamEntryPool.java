@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -87,7 +89,8 @@ public class BlockOutputStreamEntryPool {
   private final long openID;
   private final ExcludeList excludeList;
   private final ContainerClientMetrics clientMetrics;
-  private AtomicLong nextContainerLeaseRenew;
+  private final AtomicLong nextContainerLeaseRenew;
+  private final ExecutorService leaseRenewService;
 
   @SuppressWarnings({"parameternumber", "squid:S00107"})
   public BlockOutputStreamEntryPool(
@@ -122,7 +125,8 @@ public class BlockOutputStreamEntryPool {
                 .createByteBufferConversion(unsafeByteBufferConversion));
     this.clientMetrics = clientMetrics;
     this.nextContainerLeaseRenew = new AtomicLong(0);
-    new Thread(this::periodicRenewLease).start();
+    this.leaseRenewService = Executors.newSingleThreadExecutor();
+    this.leaseRenewService.submit(new Thread(this::periodicRenewLease));
   }
 
   ExcludeList createExcludeList() {
@@ -149,7 +153,8 @@ public class BlockOutputStreamEntryPool {
     excludeList = new ExcludeList();
     this.clientMetrics = clientMetrics;
     this.nextContainerLeaseRenew = new AtomicLong(0);
-    new Thread(this::periodicRenewLease).start();
+    this.leaseRenewService = Executors.newSingleThreadExecutor();
+    this.leaseRenewService.submit(new Thread(this::periodicRenewLease));
   }
 
   /**
@@ -415,6 +420,7 @@ public class BlockOutputStreamEntryPool {
     } else {
       LOG.warn("Closing KeyOutputStream, but key args is null");
     }
+    this.leaseRenewService.shutdownNow();
   }
 
   BlockOutputStreamEntry getCurrentStreamEntry() {
