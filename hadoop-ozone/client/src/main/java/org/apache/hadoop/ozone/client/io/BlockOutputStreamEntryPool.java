@@ -125,7 +125,11 @@ public class BlockOutputStreamEntryPool {
                 .createByteBufferConversion(unsafeByteBufferConversion));
     this.clientMetrics = clientMetrics;
     this.nextContainerLeaseRenew = new AtomicLong(0);
-    this.leaseRenewService = Executors.newSingleThreadExecutor();
+    this.leaseRenewService = Executors.newSingleThreadExecutor(r -> {
+      Thread t = Executors.defaultThreadFactory().newThread(r);
+      t.setDaemon(true);
+      return t;
+    });
     this.leaseRenewService.submit(new Thread(this::periodicRenewLease));
   }
 
@@ -153,7 +157,11 @@ public class BlockOutputStreamEntryPool {
     excludeList = new ExcludeList();
     this.clientMetrics = clientMetrics;
     this.nextContainerLeaseRenew = new AtomicLong(0);
-    this.leaseRenewService = Executors.newSingleThreadExecutor();
+    this.leaseRenewService = Executors.newSingleThreadExecutor(r -> {
+      Thread t = Executors.defaultThreadFactory().newThread(r);
+      t.setDaemon(true);
+      return t;
+    });
     this.leaseRenewService.submit(new Thread(this::periodicRenewLease));
   }
 
