@@ -21,7 +21,6 @@ import com.codahale.metrics.Timer;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
@@ -189,12 +188,23 @@ public class OzoneClientKeyReadWriteOps extends BaseFreonGenerator
 
   public void processReadTasks(String keyName, OzoneClient client)
           throws RuntimeException, IOException {
-    OzoneKeyDetails keyDetails = client.getProxy().getKeyDetails(volumeName, bucketName, keyName);            
+    OzoneKeyDetails keyDetails = client.getProxy()
+        .getKeyDetails(volumeName, bucketName, keyName);
     if (!readMetadataOnly) {
       byte[] data = new byte[objectSizeInBytes];
       try (OzoneInputStream introStream = keyDetails.getContent()) {
-         introStream.read(data);
+        int total = 0;
+        int read = 0;
+        while (read != -1) {
+          read = introStream.read(data);
+          total += read;
+        }
+        if (total != objectSizeInBytes) {
+          LOG.warn("Read {} bytes, expected {} bytes", total,
+              objectSizeInBytes);
+        }
       } catch (Exception ex) {
+        LOG.warn("Read failed for key {}", keyName, ex);
         throw ex;
       }
     }
@@ -202,10 +212,11 @@ public class OzoneClientKeyReadWriteOps extends BaseFreonGenerator
 
   public void processWriteTasks(String keyName, OzoneClient ozoneClient)
           throws RuntimeException, IOException {
-    try (OzoneOutputStream out =
-                 ozoneClient.getProxy().createKey(volumeName, bucketName, keyName, objectSizeInBytes, null, new HashMap())) {
+    try (OzoneOutputStream out = ozoneClient.getProxy().createKey(volumeName,
+        bucketName, keyName, objectSizeInBytes, null, new HashMap<>())) {
       out.write(keyContent);
     } catch (Exception ex) {
+      LOG.warn("Write failed for key {}", keyName, ex);
       throw ex;
     }
   }
@@ -217,7 +228,7 @@ public class OzoneClientKeyReadWriteOps extends BaseFreonGenerator
       return TaskType.WRITE_TASK;
     }
     //mix workload
-    int tmp = ThreadLocalRandom.current().nextInt(1,101);
+    int tmp = ThreadLocalRandom.current().nextInt(1, 101);
     if (tmp  <= percentageRead) {
       return TaskType.READ_TASK;
     } else {

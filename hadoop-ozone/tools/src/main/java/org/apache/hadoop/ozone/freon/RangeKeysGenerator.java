@@ -23,7 +23,6 @@ import com.codahale.metrics.Timer;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.slf4j.Logger;
@@ -167,8 +166,8 @@ public class RangeKeysGenerator extends BaseFreonGenerator
     String keyName;
     for (int i = start; i < end + 1; i++) {
       keyName = getPrefix() + FILE_DIR_SEPARATOR + fn.apply(i);
-      try (OzoneOutputStream out = client.getProxy().
-                        createKey(volumeName, bucketName, keyName, objectSizeInBytes, null, new HashMap())) {
+      try (OzoneOutputStream out = client.getProxy().createKey(volumeName,
+          bucketName, keyName, objectSizeInBytes, null, new HashMap())) {
         out.write(keyContent);
       }
     }
