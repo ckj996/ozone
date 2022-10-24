@@ -251,10 +251,15 @@ public class BlockOutputStreamEntryPool {
     Triple<List<ContainerID>, Long, Long> result =
         omClient.containerLease(0L, new ArrayList<>(containers));
 
-    LOG.info("Time {}, Requested lease for {} containers, " +
+    long now = Instant.now().getEpochSecond();
+    if (result.getMiddle() > now) {
+      LOG.warn("Leases are valid from {}, which is in the future," +
+              "current time is {}", result.getMiddle(), now);
+    }
+
+    LOG.debug("Current time {}, Requested lease for {} containers, " +
             "renewed {} containers, valid from {} to {}",
-        Instant.now().getEpochSecond(),
-        containers.size(), result.getLeft().size(),
+        now, containers.size(), result.getLeft().size(),
         result.getMiddle(), result.getRight());
 
     Set<Long> renewed = result.getLeft().stream()
