@@ -264,17 +264,15 @@ public class BlockOutputStreamEntryPool {
     // FIXME: find a more proper next renew time.
     nextContainerLeaseRenew.set(result.getRight() - 10);
 
-    // TODO: it is possible that some containers are not renewed.
-    /*
     for (BlockOutputStreamEntry entry : streamEntries) {
       if (!entry.isClosed() &&
           !renewed.contains(entry.getBlockID().getContainerID())) {
-        LOG.warn("Lease renewal failed for container {}, closing stream",
+        LOG.warn("Lease renewal failed for container {}",
             entry.getBlockID().getContainerID());
-        entry.close();
+        // We should not close the stream here,
+        // because the worst case is ContainerNotOpenException.
       }
     }
-    */
   }
 
   /**
