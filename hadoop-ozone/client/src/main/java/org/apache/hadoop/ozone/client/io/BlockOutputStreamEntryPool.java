@@ -230,7 +230,7 @@ public class BlockOutputStreamEntryPool {
       } catch (IOException e) {
         LOG.error("Failed to renew container lease", e);
       } catch (InterruptedException e) {
-        LOG.info("Periodic renew lease thread interrupted");
+        LOG.debug("Periodic renew lease thread interrupted");
         Thread.currentThread().interrupt();
       }
     }
