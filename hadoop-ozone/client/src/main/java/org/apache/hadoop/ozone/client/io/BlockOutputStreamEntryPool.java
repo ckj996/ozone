@@ -130,7 +130,7 @@ public class BlockOutputStreamEntryPool {
       t.setDaemon(true);
       return t;
     });
-    this.leaseRenewService.submit(new Thread(this::periodicRenewLease));
+    this.leaseRenewService.submit(this::periodicRenewLease);
   }
 
   ExcludeList createExcludeList() {
@@ -162,7 +162,7 @@ public class BlockOutputStreamEntryPool {
       t.setDaemon(true);
       return t;
     });
-    this.leaseRenewService.submit(new Thread(this::periodicRenewLease));
+    this.leaseRenewService.submit(this::periodicRenewLease);
   }
 
   /**
