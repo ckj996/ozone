@@ -78,17 +78,20 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
             containerID, LifeCycleEvent.FINALIZE);
       }
 
+      ContainerStateManager csm = containerManager.getContainerStateManager();
       // Check container lease before send command to datanodes.
-      long leaseEndTime = 0;
-      long currentTime = 0;
-      do {
-        Thread.sleep((leaseEndTime - currentTime) * 1000);
-        leaseEndTime = containerManager.getContainerStateManager()
-            .queryLease(containerID);
-        currentTime = Instant.now().getEpochSecond();
-        LOG.info("Container {} lease end time is {}, current time is {}",
-            containerID, leaseEndTime, currentTime);
-      } while (leaseEndTime > currentTime);
+      // Null pointer check is for mocked tests.
+      if (csm != null) {
+        long leaseEndTime = 0;
+        long currentTime = 0;
+        do {
+          Thread.sleep((leaseEndTime - currentTime) * 1000);
+          leaseEndTime = csm.queryLease(containerID);
+          currentTime = Instant.now().getEpochSecond();
+          LOG.info("Container {} lease end time is {}, current time is {}",
+              containerID, leaseEndTime, currentTime);
+        } while (leaseEndTime > currentTime);
+      }
 
       // ContainerInfo has to read again after the above state change.
       final ContainerInfo container = containerManager

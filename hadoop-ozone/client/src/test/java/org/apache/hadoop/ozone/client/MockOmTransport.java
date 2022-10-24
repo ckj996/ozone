@@ -57,6 +57,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -129,11 +130,24 @@ public class MockOmTransport implements OmTransport {
     case AllocateBlock:
       return response(payload, r -> r.setAllocateBlockResponse(
           allocateBlock(payload.getAllocateBlockRequest())));
+    case ContainerLease:
+      return response(payload, r -> r.setContainerLeaseResponse(
+          containerLease(payload.getContainerLeaseRequest())));
     default:
       throw new IllegalArgumentException(
           "Mock version of om call " + payload.getCmdType()
               + " is not yet implemented");
     }
+  }
+
+  private OzoneManagerProtocolProtos.ContainerLeaseResponse containerLease(
+      OzoneManagerProtocolProtos.ContainerLeaseRequest containerLeaseRequest) {
+    OzoneManagerProtocolProtos.ContainerLeaseResponse.Builder builder =
+        OzoneManagerProtocolProtos.ContainerLeaseResponse.newBuilder()
+            .setValidFrom(Instant.now().getEpochSecond())
+            .setExpiresAt(Instant.now().getEpochSecond() + 1000)
+            .addAllContainerIDs(containerLeaseRequest.getContainerIDsList());
+    return builder.build();
   }
 
   private OzoneManagerProtocolProtos.AllocateBlockResponse allocateBlock(
