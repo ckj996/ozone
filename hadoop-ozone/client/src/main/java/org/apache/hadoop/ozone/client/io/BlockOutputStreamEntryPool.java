@@ -267,7 +267,8 @@ public class BlockOutputStreamEntryPool {
         .collect(Collectors.toSet());
 
     // FIXME: find a more proper next renew time.
-    nextContainerLeaseRenew.set(result.getRight() - 10);
+    long nextRenew = Math.max(result.getMiddle() + 1, result.getRight() - 10);
+    nextContainerLeaseRenew.set(nextRenew);
 
     for (BlockOutputStreamEntry entry : streamEntries) {
       if (!entry.isClosed() &&
