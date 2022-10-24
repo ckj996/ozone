@@ -743,11 +743,11 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
   }
 
   @Override
-  public Triple<List<ContainerID>, Long, Long> containerLease(long clientID,
+  public Triple<List<ContainerID>, Long, Long> containerLease(long clientId,
       List<ContainerID> containersToAcquire) throws IOException {
     OMRequest omRequest = createOMRequest(Type.ContainerLease)
         .setContainerLeaseRequest(ContainerLeaseRequest.newBuilder()
-            .setClientID(clientID)
+            .setClientID(clientId)
             .addAllContainerIDs(containersToAcquire.stream().map(
                 ContainerID::getProtobuf).collect(Collectors.toList())))
         .build();
