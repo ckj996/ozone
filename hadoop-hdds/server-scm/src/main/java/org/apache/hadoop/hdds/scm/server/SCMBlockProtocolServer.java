@@ -173,25 +173,33 @@ public class SCMBlockProtocolServer implements
 
   @Override
   public List<AllocatedBlock> allocateBlock(
-      long size, int num,
+      long size, int num, long lastBlockSize,
       ReplicationConfig replicationConfig,
       String owner, ExcludeList excludeList
   ) throws IOException {
+    // If lastBlockSize is not specified, we will use the default block size.
+    if (lastBlockSize == 0) {
+      lastBlockSize = size;
+    }
+
     Map<String, String> auditMap = Maps.newHashMap();
     auditMap.put("size", String.valueOf(size));
     auditMap.put("num", String.valueOf(num));
+    auditMap.put("lastBlockSize", String.valueOf(lastBlockSize));
     auditMap.put("replication", replicationConfig.toString());
     auditMap.put("owner", owner);
     List<AllocatedBlock> blocks = new ArrayList<>(num);
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Allocating {} blocks of size {}, with {}",
-          num, size, excludeList);
+      LOG.debug("Allocating {} blocks of size {}, " +
+          "in which lastBlock size is {}, with {}",
+          num, size, lastBlockSize, excludeList);
     }
     try {
       for (int i = 0; i < num; i++) {
         AllocatedBlock block = scm.getScmBlockManager()
-            .allocateBlock(size, replicationConfig, owner, excludeList);
+            .allocateBlock(i + 1 == num ? lastBlockSize : size,
+                replicationConfig, owner, excludeList);
         if (block != null) {
           blocks.add(block);
         }

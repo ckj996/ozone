@@ -65,7 +65,7 @@ public interface ScmBlockLocationProtocol extends Closeable {
   default List<AllocatedBlock> allocateBlock(long size, int numBlocks,
       ReplicationType type, ReplicationFactor factor, String owner,
       ExcludeList excludeList) throws IOException, TimeoutException {
-    return allocateBlock(size, numBlocks, ReplicationConfig
+    return allocateBlock(size, numBlocks, size, ReplicationConfig
         .fromProtoTypeAndFactor(type, factor), owner, excludeList);
   }
 
@@ -75,6 +75,7 @@ public interface ScmBlockLocationProtocol extends Closeable {
    *
    * @param size              - size of the block.
    * @param numBlocks         - number of blocks.
+   * @param lastBlockSize     - size of the last block (included in numBlocks).
    * @param replicationConfig - replicationConfiguration
    * @param owner             - service owner of the new block
    * @param excludeList       List of datanodes/containers to exclude during
@@ -84,7 +85,7 @@ public interface ScmBlockLocationProtocol extends Closeable {
    * @throws IOException
    */
   List<AllocatedBlock> allocateBlock(long size, int numBlocks,
-      ReplicationConfig replicationConfig, String owner,
+      long lastBlockSize, ReplicationConfig replicationConfig, String owner,
       ExcludeList excludeList) throws IOException;
 
   /**

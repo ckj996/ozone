@@ -146,6 +146,10 @@ message AllocateScmBlockRequestProto {
   //used for EC replicaiton instead of the replication factor
   optional hadoop.hdds.ECReplicationConfig ecReplicationConfig = 8;
 
+  // Used to hint the size of the last block to be allocated.
+  // Value should be in range (0, size], defaults to size if not set.
+  // Note the lastBlock is included in numBlocks.
+  optional uint64 lastBlockSize = 9;
 }
 
 /**
